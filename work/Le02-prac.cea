@@ -1,0 +1,5420 @@
+// Le02 1.20a practice port.
+// Native-menu interaction derived from Priw8 prac.cea v0.2.
+// Stage/pattern research: leprac, Oscar; phase skips: RosePenguin100.
+// Target SHA-256: 22bba60f6250f95437c08cdcf1e1114ea16aa1537f26c4334f1a699dc37cb8c9
+// CE: attach to the prepared Le02prac.exe; enable before entering practice.
+// All numeric literals are hexadecimal. Do not apply to another version.
+define(game,"Le02prac.exe")
+define(cave,game+B92000)
+define(DIFF,game+ADDFE8)
+define(CHAR_IDX,game+ADDFEC)
+define(getInput,game+74510)
+define(getTextTexture,game+EBF60)
+define(drawTextTexture,game+F2C40)
+define(KEY_DOWN,KEYS+0)
+define(KEY_LEFT,KEYS+4)
+define(KEY_RIGHT,KEYS+8)
+define(KEY_UP,KEYS+C)
+define(KEY_Z,KEYS+10)
+define(KEY_X,KEYS+14)
+define(KEY_SHIFT,KEYS+18)
+// --- F12 overlay (v0.4.0) ---
+define(KBD_IAT,game+3AC2E8)
+define(KEYSHADOW,game+5E0B8C)
+define(box,game+D1010)
+// --- hint file I/O (v0.6.0), all stdcall ---
+define(MODULE_IAT,game+3AC1B0)
+define(FILE_IAT,game+3AC238)
+define(READ_IAT,game+3AC0E8)
+define(CLOSE_IAT,game+3AC250)
+define(WRITE_IAT,game+3AC22C)
+define(GETSIZE_IAT,game+3AC0E0)
+define(SEEK_IAT,game+3AC0CC)
+define(FINDFIRST_IAT,game+3AC0D8)
+define(FINDNEXT_IAT,game+3AC0DC)
+define(FINDCLOSE_IAT,game+3AC0D4)
+
+[ENABLE]
+// --- F12 overlay (v0.4.0): hooks inside the real per-frame function ---
+// game+CFFCD is 10 bytes into the frame function (mov [game+65110],1).
+assert(game+CFFCD,C7 05 10 51 A6 00 01 00 00 00)
+// game+14BD50 is the present function's entry: `push ebp / mov ebp,esp /
+// sub esp,0x4cc`.  It is called once per frame from game+DF9AF, at the
+// moment the scene has been drawn but nothing has been blitted yet, and
+// it is reached in every mode (title, menu, stage, replay).  That makes
+// it the one point where an overlay can be drawn and still be presented.
+assert(game+14BD50,55 8B EC 81 EC CC 04 00 00)
+// the four keyboard-refresh call sites, all `call game+140CD0`.
+assert(game+CF255,E8 76 1A 07 00)
+assert(game+CF2B5,E8 16 1A 07 00)
+assert(game+CF445,E8 86 18 07 00)
+assert(game+CF7CD,E8 FE 14 07 00)
+// The IAT slots hold the RVA of the hint/name entry on disk, which is
+// what pins us to this exact build.
+assert(game+3AC2E8,80 67 44 00)
+assert(game+3AC018,C4 68 44 00)
+assert(game+3AC01C,D8 68 44 00)
+assert(game+5E0B8C,00 00 00 00)
+// ---- v0.4.0: the game-over decision and the per-frame power clamp ----
+// game+B980C is the `cmp [player+0x48], 0 / jg <respawn>` that decides
+// between respawning and GAME OVER.  Six bytes, and the check happens
+// BEFORE the shared `dec [player+0x48]`, so "pretend life == 1" is enough.
+assert(game+B980C,83 78 48 00 7F 2E)
+// game+B9B05 is the tail of the player update: `clamp power into [0,500]`.
+// It runs every frame anyway, which is why freezing power here costs
+// nothing extra -- we are replacing an existing write, not adding one.
+assert(game+B9B05,8B 07 83 78 7C 00 7D 07 C7 40 7C 00 00 00 00 8B 07 81 78 7C F4 01 00 00 7C 07 C7 40 7C F4 01 00 00)
+// ---- v0.5.0: the RNG seed ----
+// game+B2BD9 is the ONLY call to the seed wrapper (verified by a full
+// .text sweep: the wrapper at 0xD04D0 has exactly one caller, and the
+// seed global 0xEDDFF4 has exactly one reader -- this one).  Five bytes.
+assert(game+B2BD9,E8 F2 D8 01 00)
+assert(game+74112,68 d0 9c 83 00)
+assert(game+B264E,8b f9 0f 57 c0)
+assert(game+B32C6,c7 47 4c 00 00 00 00)
+assert(game+27E90,89 07 e8 c8 69 29 00)
+assert(game+B67E9,e8 c2 bc 02 00)
+assert(game+B37CE,c7 87 24 28 00 00 00 00 00 00)
+assert(game+B9091,c7 40 58 00 00 00 00)
+assert(game+C29A5,8b 46 4c 3b 46 68)
+assert(game+C29D0,6a 00 ff 76 30)
+assert(game+C49FB,80 bb a1 00 00 00 01)
+assert(game+C4C92,80 bb a1 00 00 00 01)
+assert(game+C4DAE,80 bb a1 00 00 00 01)
+assert(game+C4F80,80 bb a1 00 00 00 01)
+assert(game+C513E,80 bb a1 00 00 00 00)
+assert(game+6B7BA,c7 05 88 08 9e 00 01 00 00 00)
+assert(game+6B837,81 fe 7c 0b 00 00)
+assert(game+27724,c7 83 24 09 00 00 94 2f 00 00)
+assert(game+D5DB,c7 46 08 00 00 00 00)
+assert(game+D698,e8 10 08 2b 00)
+assert(game+D588,e8 e2 15 2b 00)
+assert(game+B902B,c7 40 48 09 00 00 00)
+assert(game+B9064,8b 84 83 a8 00 00 00)
+assert(game+73F67,0a)
+assert(game+7405F,68 36 01 00 00)
+assert(game+7409B,68 36 01 00 00)
+assert(cave+3FF0,4c 45 50 52 41 43 32 3a 46 49 58 45 44 3a 31 00)
+label(customMenuRender)
+label(menu_keys)
+label(menu_ready)
+label(customMenu_slowInc)
+label(customMenu_keyCheck)
+label(customMenu_rightClb)
+label(customMenu_notRight)
+label(customMenu_leftClb)
+label(customMenu_notLeft)
+label(customMenu_notUp)
+label(customMenu_notDown)
+label(beginPracticeStage)
+label(initFrameTimer)
+label(frame_done)
+label(applyPatternIdWarp)
+label(boss_done)
+label(setPracFalse)
+label(setPower)
+label(power_done)
+label(setScore)
+label(score_done)
+label(musicFix1)
+label(music_first)
+label(music_original)
+label(musicFix2)
+label(music_normal_kind)
+label(music_push_stage)
+label(selectBossMusicKind)
+label(prepareAlphaMusic)
+label(getBossExtraFlag)
+label(boss_extra_return)
+label(boss_extra_scene)
+label(bossBombGate0)
+label(bossBombGate1)
+label(bossBombGate2)
+label(bossBombGate3)
+label(bossBombGate4)
+label(getPhase)
+label(phase_return)
+label(tasStart)
+label(tasLength)
+label(tasTimer)
+label(customMenuSwitchClb)
+label(callback_pattern)
+label(callback_in_range)
+label(callback_boss)
+label(callback_frame)
+label(callback_none)
+label(callback_done)
+label(getColor)
+label(color_selected)
+label(preparePracticeState)
+label(practice_checksum)
+label(practice_state_replay)
+label(practice_state_inactive)
+label(validateReplayConfig)
+label(replay_checksum)
+label(replay_config_bad)
+label(replayLoadBegin)
+label(replayLoadSettings)
+label(replay_load_body_complete)
+label(replay_load_done)
+label(replaySaveSettings)
+label(replay_save_body_complete)
+label(replay_save_done)
+label(MBOSS_FRAMES)
+label(BOSS_FRAMES)
+label(MAX_PATTERNID)
+label(MBOSS_PATTERN_CNT)
+label(PATTERNS_TABLE)
+label(IDS_TABLE)
+label(PHASES_TABLE)
+label(names_0)
+label(ids_0)
+label(phases_0)
+label(name_0_0)
+label(name_0_1)
+label(name_0_2)
+label(name_0_3)
+label(name_0_4)
+label(name_0_5)
+label(name_0_6)
+label(names_1)
+label(ids_1)
+label(phases_1)
+label(name_1_0)
+label(name_1_1)
+label(name_1_2)
+label(name_1_3)
+label(name_1_4)
+label(name_1_5)
+label(name_1_6)
+label(name_1_7)
+label(name_1_8)
+label(names_2)
+label(ids_2)
+label(phases_2)
+label(name_2_0)
+label(name_2_1)
+label(name_2_2)
+label(name_2_3)
+label(name_2_4)
+label(name_2_5)
+label(name_2_6)
+label(name_2_7)
+label(name_2_8)
+label(name_2_9)
+label(name_2_10)
+label(names_3)
+label(ids_3)
+label(phases_3)
+label(name_3_0)
+label(name_3_1)
+label(name_3_2)
+label(name_3_3)
+label(name_3_4)
+label(name_3_5)
+label(name_3_6)
+label(name_3_7)
+label(name_3_8)
+label(names_4)
+label(ids_4)
+label(phases_4)
+label(name_4_0)
+label(name_4_1)
+label(name_4_2)
+label(name_4_3)
+label(name_4_4)
+label(name_4_5)
+label(name_4_6)
+label(name_4_7)
+label(name_4_8)
+label(name_4_9)
+label(name_4_10)
+label(names_5)
+label(ids_5)
+label(phases_5)
+label(name_5_0)
+label(name_5_1)
+label(name_5_2)
+label(name_5_3)
+label(name_5_4)
+label(name_5_5)
+label(name_5_6)
+label(name_5_7)
+label(name_5_8)
+label(name_5_9)
+label(name_5_10)
+label(name_5_11)
+label(name_5_12)
+label(name_5_13)
+label(name_5_14)
+label(name_5_15)
+label(name_5_16)
+label(name_5_17)
+label(name_5_18)
+label(names_6)
+label(ids_6)
+label(phases_6)
+label(name_6_0)
+label(name_6_1)
+label(name_6_2)
+label(name_6_3)
+label(name_6_4)
+label(name_6_5)
+label(name_6_6)
+label(name_6_7)
+label(name_6_8)
+label(name_6_9)
+label(name_6_10)
+label(name_6_11)
+label(name_6_12)
+label(name_6_13)
+label(name_6_14)
+label(name_6_15)
+label(name_6_16)
+label(name_6_17)
+label(name_6_18)
+label(name_6_19)
+label(name_6_20)
+label(name_6_21)
+label(SEL_DATA)
+label(SEL_ARR_BEGIN)
+label(SEL_STAGE)
+label(SEL_DIFF)
+label(FRAME_COUNT_INIT)
+label(PATTERN_WARP)
+label(SEL_POWER)
+label(SEL_FLASHBOMB)
+label(SEL_RESOURCE)
+label(SEL_ARR_LAST)
+label(SEL_SCORE)
+label(CURR_SEL)
+label(IS_PRAC)
+label(MUSIC_PLAYED)
+label(MUSIC_KIND)
+label(SELECTED_ID)
+label(SELECTED_PHASE)
+label(KEYS)
+label(RECORD_VALID)
+label(REPLAY_VALID)
+label(RECORD_CONFIG)
+label(REPLAY_CONFIG)
+label(DIFF_TXTS)
+label(diff_0)
+label(diff_1)
+label(diff_2)
+label(diff_3)
+label(diff_4)
+label(diff_5)
+label(diff_6)
+label(TXT_STAGE)
+label(TXT_DIFF)
+label(TXT_FRAME)
+label(TXT_PATTERN)
+label(TXT_POWER)
+label(TXT_POWER2)
+label(TXT_FLASHBOMB)
+label(TXT_RESOURCE)
+label(TXT_SCORE)
+label(SEL_MAX)
+label(SEL_LIFE)
+label(SEL_BOMB)
+label(TXT_LIFE)
+label(TXT_BOMB)
+label(menu_max_ok)
+label(menu_sec_max)
+label(menu_max_ffff)
+label(customMenu_leftZero)
+label(life_stub)
+label(bomb_stub)
+label(life_stub_orig)
+label(bomb_stub_orig)
+label(life_stub_ret)
+label(bomb_stub_ret)
+label(BOMB_DEF)
+label(LAST_CHAR)
+label(menu_char_done)
+label(WRAP_LOCK)
+label(WRAP_TIMER)
+label(wrap_latch)
+label(wrap_latch_ret)
+label(wrap_release)
+label(wrap_no_lock)
+label(SEL_MODE)
+label(SEL_SECTION)
+label(SECTION_CNT)
+label(SECTION_TABLE)
+label(sec_0)
+label(sec_1)
+label(sec_2)
+label(sec_3)
+label(sec_4)
+label(sec_5)
+label(sec_6)
+label(MODE_TXTS)
+label(mode_0)
+label(mode_1)
+label(TXT_MODE)
+label(TXT_SECTION)
+// (menu_vptr_ok used to be declared here, but the --ui block replaces the
+//  --moderow section-mode override that defined it.  Dropped so the
+//  declared-but-undefined check in cea.py stays meaningful.)
+label(draw_section)
+label(draw_row_done)
+label(callback_section)
+label(callback_sec_ok)
+label(callback_sec_none)
+label(TAS_START)
+label(TAS_LENGTH)
+label(TAS_TIMER)
+label(overlay_entry)
+label(overlay_input)
+label(overlay_logic)
+label(overlay_draw)
+label(ovl_in_done)
+label(ovl_in_clear)
+label(ovl_toggle_done)
+label(ovl_logic_done)
+label(ovl_menu_open)
+label(ovl_up_done)
+label(ovl_down_done)
+label(ovl_left_done)
+label(ovl_right_done)
+label(ovl_move_up)
+label(ovl_move_down)
+label(ovl_move_left)
+label(ovl_move_right)
+label(ovl_up_ok)
+label(ovl_down_ok)
+label(ovl_move_blocked)
+label(ovl_row)
+label(ovl_apply)
+label(ovl_apply_hi_clamp)
+label(ovl_apply_lo)
+label(ovl_apply_lo_clamp)
+label(ovl_apply_store)
+label(ovl_nudge_right)
+label(ovl_nudge_left)
+label(ovl_reset_hold)
+label(ovl_hold_not_right)
+label(ovl_hold_check)
+label(ovl_hold_new)
+label(ovl_hold_left)
+label(ovl_hold_none)
+label(ovl_hold_done)
+label(ovl_type_keys)
+label(ovl_type_z_done)
+label(ovl_type_esc_done)
+label(ovl_type_back_done)
+label(ovl_type_digit_loop)
+label(ovl_type_digit_next)
+label(ovl_type_digits_done)
+label(ovl_type_toggle)
+label(ovl_type_toggle_done)
+label(ovl_type_commit)
+label(ovl_type_exit)
+label(ovl_type_cancel)
+label(ovl_type_try_capture)
+label(ovl_type_switch)
+label(ovl_type_try_seed)
+label(ovl_type_cancel_done)
+label(ovl_type_append)
+label(ovl_type_app_shift)
+label(ovl_type_app_room)
+label(ovl_type_app_done)
+label(ovl_seedsw_done)
+label(ovl_draw_row)
+label(ovl_draw_done)
+label(ovl_getColor)
+label(ovl_color_sel)
+label(OVERLAY_OPEN)
+label(OVL_DRAWN)
+label(OVL_CUR)
+label(OVL_ROWS_N)
+label(OVL_PREV_F12)
+label(OVL_PREV_KEYS)
+label(OVL_VKBUF)
+label(OVL_ROWS)
+label(OVL_ALT)
+label(OVL_HOLD_DIR)
+label(OVL_HOLD_N)
+label(OVL_NUDGE_N)
+label(OVL_HOLD_DELAY)
+label(OVL_NUDGE_EVERY)
+label(OVL_RCUR)
+label(OVL_RPTR)
+label(OVL_RY)
+label(OVL_RTXT)
+label(ovl_pick_alt)
+label(ovl_pick_plain)
+label(ovl_pick_done)
+label(ovl_boss_poll)
+label(ovl_boss_clear)
+label(ovl_boss_done)
+label(ovl_boss_zero)
+label(ovl_boss_have)
+label(ovl_boss_mirror)
+label(ovl_boss_same_fight)
+label(ovl_boss_tick)
+label(ovl_boss_suppress)
+label(HINT_PAT_IDX)
+label(HINT_PAT_ON)
+label(HINT_PAT_FRAME)
+label(HINT_PAT_WAS)
+label(HINT_PAT_LAST)
+label(HINT_PAT_SKIP)
+label(OVL_TYPE_ON)
+label(OVL_TYPE_OLD)
+label(OVL_TYPE_FRESH)
+label(OVL_TYPE_LAST)
+label(OVL_PREV_SEEDSW)
+label(OVL_V_NOGAMEOVER)
+label(OVL_V_LOCKPWR)
+label(OVL_V_DEBT)
+label(OVL_V_HINT)
+label(OVL_V_PCROSS)
+label(OVL_V_CAPTURE)
+label(OVL_V_FRAME)
+label(OVL_V_PATTERN)
+label(DBG_STAGE)
+label(TXT_OVL_PATTERN)
+label(OVL_TYPE_ROW)
+label(HINT_OX)
+label(HINT_OY)
+label(HINT_SIZE)
+label(HINT_CX)
+label(HINT_CY)
+label(HINT_HALF)
+label(DBG_PX)
+label(DBG_PY)
+label(draw_hints)
+label(draw_hints_done)
+label(draw_pcross)
+label(ovl_pc_done)
+label(load_hints)
+label(load_hints_done)
+label(load_hints_scan)
+label(load_hints_next)
+label(load_hints_loop)
+label(load_hints_skip)
+label(load_hints_want)
+label(load_hints_selstage)
+label(load_hints_cut)
+label(load_hints_p1)
+label(load_hints_dig)
+label(load_hints_p2)
+label(draw_hints_dash)
+label(draw_hints_dash_len)
+label(draw_hints_dash_loop)
+label(draw_hints_dash_seg)
+label(draw_hints_col)
+label(draw_hints_vline)
+label(draw_hints_vl_len)
+label(draw_hints_vl_loop)
+label(draw_hints_vl_seg)
+label(draw_hints_loop)
+label(draw_hints_next)
+label(draw_hints_adx)
+label(draw_hints_ady)
+label(draw_hints_char_ok)
+label(draw_hints_boss)
+label(draw_hints_boss_start)
+label(draw_hints_boss_end)
+label(draw_hints_boss_ok)
+label(hint_emit_time)
+label(hint_emit_abs)
+label(HINT_C_KIND)
+label(HINT_C_PID)
+label(HINT_C_PF)
+label(HINT_C_EKIND)
+label(HINT_C_EPID)
+label(HINT_C_EF)
+label(HINT_PATHW)
+label(HINT_PRE)
+label(HINT_SUF)
+label(HINT_BUF)
+label(HINT_BUFMAX)
+label(HINT_HANDLE)
+label(HINT_GOT)
+label(HINT_LEN)
+label(HINT_SYM)
+label(HINT_COL)
+label(HINT_COL_DIM)
+label(HINT_FADE_R)
+label(HINT_DASH)
+label(HINT_USECOL)
+label(HINT_DX)
+label(HINT_DY)
+label(TXT_OVL_FIX_X)
+label(TXT_OVL_FIX_Y)
+label(HINT_DASHLEN)
+label(HINT_DASHEND)
+label(HINT_P)
+label(HINT_END)
+label(HINT_CURSTAGE)
+label(HINT_WANT)
+label(HINT_N)
+label(HINT_MAXN)
+label(HINT_SKIP)
+label(HINT_TOK)
+label(HINT_ARR)
+label(HINT_E_MARK)
+label(HINT_E_SIZE)
+label(HINT_E_CHAR)
+label(HINT_E_X)
+label(HINT_E_Y)
+label(HINT_E_SK)
+label(HINT_E_SP)
+label(HINT_E_SF)
+label(HINT_E_EK)
+label(HINT_E_EP)
+label(HINT_E_EF)
+label(HINT_TKIND)
+label(HINT_TPAT)
+label(HINT_TFR)
+label(HINT_CUR)
+label(HINT_ROW)
+label(HINT_C_X)
+label(HINT_C_Y)
+label(HINT_C_F)
+label(HINT_CHAP_END)
+label(HINT_IEDI)
+label(HINT_CAPLEN)
+label(HINT_CAPLEN2)
+label(HINT_WROTE)
+label(HINT_CAP_OK)
+label(HINT_LINE)
+label(HINT_LINE2)
+label(HINT_LASTCH)
+label(OVL_PREV_CAP)
+label(hint_itoa)
+label(hint_itoa_loop)
+label(hint_itoa_pop)
+label(hint_itoa_out)
+label(hint_chapter_end)
+label(hint_chap_ok)
+label(hint_chap_loop)
+label(hint_chap_hit)
+label(hint_chap_out)
+label(hint_chap_fin)
+label(hint_capture)
+label(hint_capture_done)
+label(hint_capture_seek)
+label(ovl_cap_done)
+label(hint_cap_path)
+label(hint_cp_copy)
+label(hint_cp_num)
+label(hint_cp_digit)
+label(hint_cp_done)
+label(hint_cap_form_done)
+label(hint_cap_ensure_nl)
+label(HINT_GLOB)
+label(HINT_FIND)
+label(HINT_FH)
+label(HINT_PRELEN)
+label(HINT_OK)
+label(hint_build_path)
+label(hint_bp_copy)
+label(hint_bp_name)
+label(hint_bp_done)
+label(hint_diff_ok)
+label(hint_diff_scan)
+label(hint_diff_next)
+label(hint_diff_easy)
+label(hint_diff_normal)
+label(hint_diff_hard)
+label(hint_diff_unreal)
+label(hint_diff_cmp)
+label(hint_diff_have)
+label(hint_diff_no)
+label(hint_diff_none)
+label(hint_diff_out)
+label(hint_read_one)
+label(hint_read_done)
+label(hint_skip)
+label(hint_skip_loop)
+label(hint_skip_adv)
+label(hint_skip_comment)
+label(hint_skip_done)
+label(hint_tok)
+label(hint_tok_loop)
+label(hint_tok_adv)
+label(hint_tok_done)
+label(hint_atoi)
+label(hint_atoi_loop)
+label(hint_atoi_done)
+label(hint_time)
+label(hint_time_num)
+label(hint_store)
+label(parse_hints)
+label(parse_loop)
+label(parse_done)
+label(parse_hint)
+label(parse_char_done)
+label(parse_skip)
+label(parse_not_stage)
+label(parse_stage_word)
+label(ovl_draw_panel)
+label(ovl_frame_done)
+label(TXT_OVL_TITLE)
+label(TXT_OVL_NOGAMEOVER)
+label(TXT_OVL_LOCKPWR)
+label(TXT_OVL_LOCKSEED)
+label(TXT_OVL_DEBT)
+label(TXT_OVL_SEED)
+label(TXT_OVL_SEED_EDIT)
+label(TXT_OVL_HINT)
+label(TXT_OVL_CAPTURE)
+label(TXT_OVL_FRAME)
+label(TXT_OVL_PCROSS)
+label(ALT_PCROSS)
+label(TXT_PCROSS_OFF)
+label(TXT_PCROSS_ON)
+label(cfg_path)
+label(cfg_path_cut)
+label(cfg_path_cp)
+label(cfg_path_done)
+label(cfg_load)
+label(cfg_len_ok)
+label(cfg_scan)
+label(cfg_cmp)
+label(cfg_cmp_no)
+label(cfg_apply)
+label(cfg_load_done)
+label(cfg_save)
+label(cfg_save_cp)
+label(cfg_save_done)
+label(cfg_tick)
+label(cfg_tick_chk)
+label(cfg_tick_done)
+label(CFG_TAILW)
+label(CFG_KEY)
+label(CFG_PATHW)
+label(CFG_BUF)
+label(CFG_LINE)
+label(CFG_H)
+label(CFG_RD)
+label(CFG_LEN)
+label(CFG_VAL)
+label(CFG_LOADED)
+label(CFG_LAST)
+label(CFG_WROTE)
+label(ALT_NOGAMEOVER)
+label(ALT_LOCKPWR)
+label(ALT_HINT)
+label(ALT_LOCKSEED)
+label(TXT_NOGAMEOVER_OFF)
+label(TXT_NOGAMEOVER_ON)
+label(TXT_LOCKPWR_OFF)
+label(TXT_LOCKPWR_ON)
+label(TXT_HINT_OFF)
+label(TXT_HINT_ON)
+label(TXT_LOCKSEED_OFF)
+label(TXT_LOCKSEED_ON)
+label(PRB_FRAMES)
+label(PRB_INPUT)
+label(PRB_BLIT)
+label(PRB_F12)
+label(PRB_F12N)
+label(PRB_OPEN)
+label(PRB_PRES)
+label(PRB_NOGAMEOVER)
+label(PRB_LP)
+label(overlay_present)
+label(ovl_pres_done)
+label(nogameover_hook)
+label(nogameover_vanilla)
+label(nogameover_count)
+label(NOSORE_DEBT)
+label(ovl_lockpower)
+label(ovl_lp_on)
+label(ovl_lp_pin)
+label(ovl_lp_vanilla)
+label(ovl_lp_hi)
+label(ovl_lp_done)
+label(OVL_LP_TARGET)
+label(OVL_LP_HELD)
+label(DBG_PLAYER)
+label(seed_hook)
+label(seed_hook_used)
+label(seed_fp_loop)
+label(SEED_ON)
+label(SEL_SEED)
+label(SEED_USED)
+label(SEED_FP)
+label(PRB_SEEDN)
+label(PRB_SEEDON)
+label(PRB_SEEDVAL)
+label(cave_end)
+label(customMenuRender_ret)
+label(beginPracticeStage_ret)
+label(initFrameTimer_ret)
+label(applyPatternIdWarp_ret)
+label(setPracFalse_ret)
+label(setPower_ret)
+label(setScore_ret)
+label(musicFix1_ret)
+label(musicFix2_ret)
+label(bossBombGate0_ret)
+label(bossBombGate1_ret)
+label(bossBombGate2_ret)
+label(bossBombGate3_ret)
+label(bossBombGate4_ret)
+label(tasStart_ret)
+label(tasLength_ret)
+label(tasTimer_ret)
+label(replayLoadBegin_ret)
+label(replayLoadSettings_ret)
+label(replaySaveSettings_ret)
+game+73F67:
+ db 00 // cmp [ebx+624], 0 -- always take the fixed-rect branch
+game+7405F:
+ db 68 47 01 00 00 // push 0x147 -- frame bottom 327 (was 310)
+game+7409B:
+ db 68 47 01 00 00 // push 0x147 -- second (white) frame pass
+game+74112:
+ jmp customMenuRender
+game+742BD:
+customMenuRender_ret:
+game+B264E:
+ jmp beginPracticeStage
+game+B2653:
+beginPracticeStage_ret:
+game+B32C6:
+ jmp initFrameTimer
+ nop
+ nop
+game+B32CD:
+initFrameTimer_ret:
+game+27E90:
+ jmp applyPatternIdWarp
+ nop
+ nop
+game+27E97:
+applyPatternIdWarp_ret:
+game+B67E9:
+ jmp setPracFalse
+game+B67EE:
+setPracFalse_ret:
+game+B37CE:
+ jmp setPower
+ nop
+ nop
+ nop
+ nop
+ nop
+game+B37D8:
+setPower_ret:
+game+B902B:
+ jmp life_stub
+ nop
+ nop
+game+B9032:
+life_stub_ret:
+game+B9064:
+ jmp bomb_stub
+ nop
+ nop
+game+B906B:
+bomb_stub_ret:
+game+B9091:
+ jmp setScore
+ nop
+ nop
+game+B9098:
+setScore_ret:
+game+C29A5:
+ jmp musicFix1
+ nop
+game+C29AB:
+musicFix1_ret:
+game+C29D0:
+ jmp musicFix2
+game+C29D5:
+musicFix2_ret:
+game+C49FB:
+ jmp bossBombGate0
+ nop
+ nop
+game+C4A02:
+bossBombGate0_ret:
+game+C4C92:
+ jmp bossBombGate1
+ nop
+ nop
+game+C4C99:
+bossBombGate1_ret:
+game+C4DAE:
+ jmp bossBombGate2
+ nop
+ nop
+game+C4DB5:
+bossBombGate2_ret:
+game+C4F80:
+ jmp bossBombGate3
+ nop
+ nop
+game+C4F87:
+bossBombGate3_ret:
+game+C513E:
+ jmp bossBombGate4
+ nop
+ nop
+game+C5145:
+bossBombGate4_ret:
+game+6B7BA:
+ jmp tasStart
+ nop
+ nop
+ nop
+ nop
+ nop
+game+6B7C4:
+tasStart_ret:
+game+6B837:
+ jmp tasLength
+ nop
+game+6B83D:
+tasLength_ret:
+game+27724:
+ jmp tasTimer
+ nop
+ nop
+ nop
+ nop
+ nop
+game+2772E:
+tasTimer_ret:
+game+D5DB:
+ jmp replayLoadBegin
+ nop
+ nop
+game+D5E2:
+replayLoadBegin_ret:
+game+D698:
+ jmp replayLoadSettings
+game+D69D:
+replayLoadSettings_ret:
+game+D588:
+ jmp replaySaveSettings
+game+D58D:
+replaySaveSettings_ret:
+// --- F12 overlay (v0.4.0): eight in-place patches --------------------- //
+// game+CFFCD is 10 bytes into the real per-frame function.
+game+CFFCD:
+ jmp overlay_entry
+ nop
+ nop
+ nop
+ nop
+ nop
+game+CFFD7:
+// the present function's entry (9 bytes: push ebp / mov ebp,esp /
+// sub esp,0x4cc).  Everything the game draws for this frame is already
+// in the surface; nothing has been blitted yet.
+game+14BD50:
+ jmp overlay_present
+ nop
+ nop
+ nop
+ nop
+game+14BD59:
+// the four keyboard-refresh sites, each `call game+140CD0` (5 bytes).
+game+CF255:
+ call overlay_input
+game+CF25A:
+game+CF2B5:
+ call overlay_input
+game+CF2BA:
+game+CF445:
+ call overlay_input
+game+CF44A:
+game+CF7CD:
+ call overlay_input
+game+CF7D2:
+// ---- v0.4.0: the game-over decision (6 bytes) ----
+// `cmp [player+0x48],0 / jg respawn` -- when the comparison would say
+// "no lives left" and No Gameover is on, we hand the game a life of 1
+// so the shared `dec` lands on 0 instead of the GAME OVER branch.
+game+B980C:
+ jmp nogameover_hook
+ nop
+game+B9812:
+// ---- v0.4.0: freeze power (33 bytes); v0.4.2 locks onto the live value ----
+// The whole vanilla `clamp power into [0,500]` block.  It already runs
+// once per frame, so taking it over costs no extra work.
+game+B9B05:
+ jmp ovl_lockpower
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+ nop
+game+B9B26:
+// ---- v0.5.0: the RNG seed (5 bytes) ----
+// The single call to the seed wrapper.  When SEED_ON is 0 the hook just
+// forwards the game's own argument, so this is byte-equivalent to vanilla.
+game+B2BD9:
+ call seed_hook
+game+B2BDE:
+cave:
+// =================================================================== //
+// F12 overlay (v0.4.0) -- infrastructure.                            //
+//   game+CFFCD  -> logic (read keys, menu)                            //
+//   game+CF7CD + 3 siblings -> run the game's input refresh, then     //
+//                  wipe KEYSHADOW while the menu is open              //
+//   game+14BD50 -> present-function entry: paint the overlay there    //
+// =================================================================== //
+overlay_entry:
+  pushfd
+  pushad
+  inc dword ptr [PRB_FRAMES]
+  call overlay_logic
+  popad
+  popfd
+  // re-execute the instruction we displaced, then rejoin the function
+  mov dword ptr [game+665110], 1
+  jmp game+CFFD7
+
+// ---- end-of-scene hook --------------------------------------------- //
+// game+14BD50 is the present function.  Its entry is the last point at
+// which the game's own drawing helpers still work AND nothing has been
+// blitted to the window yet, so the overlay we paint here is guaranteed
+// to be part of the frame the game is about to show.  (Drawing at the
+// end of the frame function instead is silently discarded: the renderer
+// is already torn down by then, which is why v0.3.1/v0.3.2 showed
+// nothing even though every hook fired.)
+overlay_present:
+  pushfd
+  pushad
+  inc dword ptr [PRB_PRES]
+  // v0.6.0: call this every frame, not only when the menu is open -- hint
+  // markers are meant to be visible while you are playing.  overlay_draw
+  // decides what actually gets painted.
+  call overlay_draw
+ovl_pres_done:
+  popad
+  popfd
+  // re-execute the prologue we displaced, then rejoin the function
+  push ebp
+  mov ebp, esp
+  sub esp, 4cc
+  jmp game+14BD59
+
+// ---- input-refresh wrapper ---------------------------------------- //
+// Entered by a `call` that replaced `call game+140CD0`, so the stack
+// is [ret][arg] -- exactly what the real callee expects.  All four
+// sites push one argument and `add esp,4` after the call.
+overlay_input:
+  pushfd
+  pushad
+  inc dword ptr [PRB_INPUT]
+  push dword ptr [esp+40]
+  call game+140CD0
+  add esp, 4
+  cmp dword ptr [OVERLAY_OPEN], 0
+  je ovl_in_done
+  xor eax, eax
+  mov ecx, 40
+  mov edi, KEYSHADOW
+ovl_in_clear:
+  mov [edi], eax
+  add edi, 4
+  dec ecx
+  jnz ovl_in_clear
+ovl_in_done:
+  popad
+  popfd
+  ret
+
+overlay_logic:
+  pushfd
+  pushad
+  // A new frame starts here: allow exactly one overlay draw this frame.
+  mov dword ptr [OVL_DRAWN], 0
+  // ---- settings file (v0.7.8): load once, then persist any change ----
+  // Deliberately first, and before the menu-open test further down: it
+  // must run in every scene, not only while the F12 panel is up.
+  call cfg_tick
+  // Mirror the hit counter into its read-only menu row.  It counts every
+  // hit, not just fatal ones -- see NOSORE_DEBT.
+  mov eax, [NOSORE_DEBT]
+  mov [OVL_V_DEBT], eax
+  // Same for the stage frame counter at [stage+0x4C].  The pointer is only
+  // stashed at stage start, so range-check it: outside the stage it holds a
+  // stale value, and a wild pointer here would fault on every frame.
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb ovl_frame_done
+  cmp eax, 7FFF0000
+  ja ovl_frame_done
+  mov eax, [eax+4C]
+ovl_frame_done:
+  mov [OVL_V_FRAME], eax
+  // ---- boss pattern tracking (v0.7.2) --------------------------------
+  // MUST live up here, not down with the menu work: when the menu is
+  // closed overlay_logic jumps straight to ovl_logic_done, so anything
+  // after that point only runs while F12 is open -- and the boss patterns
+  // have to be tracked during ordinary play.
+  //
+  // POLL, do not hook: the pattern index is reachable from the stage object
+  // we already keep, and the one obvious hook site (game+27E90) is already
+  // taken by BAN's applyPatternIdWarp.  The chain, all verified against the
+  // vanilla exe:
+  //   RVA 0xB2F4C  mov [stage+8], eax    ; the boss manager
+  //   RVA 0x27E90  mov [manager+0], eax  ; the boss pattern object
+  //   ...and the game keeps the 0-BASED pattern ordinal at [boss+0x44]
+  //      (0 = the first pattern of the stage = the mid non-spell).
+  // See the long evidence chain further down, right before the read -- it
+  // covers the doc quote, BAN's own write site, and the live F12 read.
+  //
+  // [stage+0x30] (the stage number, 1..7) doubles as a liveness check, so a
+  // stale DBG_STAGE -- between stages, or on the title screen -- can never
+  // make us walk into freed memory.
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb ovl_boss_clear
+  cmp eax, 7FFF0000
+  ja ovl_boss_clear
+  mov ecx, [eax+30]
+  cmp ecx, 1
+  jb ovl_boss_clear
+  cmp ecx, 7
+  ja ovl_boss_clear
+  mov eax, [eax+8]
+  cmp eax, 10000
+  jb ovl_boss_clear
+  cmp eax, 7FFF0000
+  ja ovl_boss_clear
+  mov eax, [eax]
+  cmp eax, 10000
+  jb ovl_boss_clear
+  cmp eax, 7FFF0000
+  ja ovl_boss_clear
+  // ---- is a boss/mid-boss on screen at all? ----
+  // [boss+0x08] is the gate, NOT [boss+0x44].  Measured through stage 1:
+  //   0x08: 0 mid-stage, 1 from frame 2600 (mid-boss) to 2805, 0 until
+  //         4000, then 1 again for the stage boss.
+  //
+  // [boss+0x44] is the game's own "Pattern number" -- and it is 0-BASED.
+  //
+  // v0.7.6 -- this was wrong twice, so here is the evidence chain.
+  //
+  // (1) The authoritative practice doc for this game
+  //     (D:/STG/leprac/EMSRMIprac.txt) says, of the value you warp with:
+  //       "This value determines what pattern the boss will use.  The
+  //        FIRST pattern of the stage will have a value of 0, the second
+  //        will have 1, third 2 etc."
+  //
+  // (2) BAN's own upstream source writes exactly that value here.  Its
+  //     applyPatternIdWarp hook (game+27E90) does
+  //         mov ebx, [SELECTED_ID]
+  //         mov [eax+44], ebx
+  //     and SELECTED_ID is built as
+  //         mov ebx, [IDS_TABLE+eax*4]     ; ids_0 = FFFFFFFF 0 1 2 3 4 5
+  //         mov edx, [ebx+ecx*4]           ; ecx = menu row index
+  //     with the names_0 row list being
+  //         None / MNon 1 / MSpell 1 / Non 1 / Spell 1 / Non 2 / Spell 2
+  //
+  // (3) The F12 menu of the PREVIOUS build settled it.  During stage 1 the
+  //     user read: mid non -> -1, mid spell -> 0.  That build displayed
+  //     `raw - 1`, so mid non really has raw 0 and mid spell raw 1.
+  //
+  // (4) This build's own probe agrees: [boss+0x44] becomes 0 on the exact
+  //     frame the mid-boss appears (stage frame 2600).
+  //
+  // So the ordinal to expose is [boss+0x44] ITSELF -- value 0 is the mid
+  // non-spell, which is exactly what the hint file's `boss:0:...` must
+  // match.  (v0.7.4 subtracted 1 and so shifted every window up by one
+  // pattern, which is why `boss:0:0 -> boss:1:0` lit up during the mid
+  // SPELL instead of the mid non.)
+  mov ecx, [eax+8]
+  test ecx, ecx
+  jz ovl_boss_clear
+  // ---- a new fight just began? ----
+  // A freshly built boss object carries the PREVIOUS fight's last pattern
+  // number until its own first pattern starts.  Left alone that shows the
+  // mid-boss's last spell for the whole of the stage boss's intro dialogue.
+  // Patterns only ever increase, so the first pattern of a new fight can
+  // never legitimately equal the last one of the previous fight -- which
+  // makes that value safe to treat as "not started yet" and skip.
+  cmp dword ptr [HINT_PAT_WAS], 0
+  jne ovl_boss_same_fight
+  mov ecx, [HINT_PAT_LAST]
+  mov [HINT_PAT_SKIP], ecx
+ovl_boss_same_fight:
+  mov dword ptr [HINT_PAT_WAS], 1
+  mov eax, [eax+44]
+  // v0.7.5 -- sanity-clamp the raw ordinal, and reject negatives.
+  //
+  // The pointer chain above can only prove the address is PLAUSIBLE, not
+  // that the object is still alive: during boss teardown the manager still
+  // points at memory the game has already recycled, and one frame of a
+  // real stage-1 run was measured reading [boss+0x44] = 0xCC8A9D04 (heap
+  // fill junk) and [boss+0x08] = 0x1F6E0A6A (junk that happens to be
+  // non-zero, so the on-screen gate passed it).  Left unchecked that
+  // garbage got stored in HINT_PAT_IDX / HINT_PAT_LAST and could suppress
+  // a legitimate pattern in the NEXT fight via HINT_PAT_SKIP.
+  //
+  // No stage of this game has anywhere near 0x400 patterns
+  // (MAX_PATTERNID tops out at 0x15), so anything outside 0..0x3FF is junk
+  // and is treated as "not on a pattern" (HINT_PAT_ON = 0), i.e. the same
+  // state as mid-stage.  Signed compare so a negative raw lands there too.
+  cmp eax, 0
+  jl ovl_boss_zero
+  cmp eax, 400
+  jae ovl_boss_zero
+  jmp ovl_boss_have
+ovl_boss_zero:
+  // v0.7.6 -- this label now means "the boss is on screen but we cannot
+  // trust a pattern number for it": either the raw field is garbage
+  // (out of 0..0x3FF) or negative.  A boss IS present, we just do not know
+  // which pattern, so leave HINT_PAT_IDX at its last known value and keep
+  // HINT_PAT_ON = 0 so no boss:P:F window can fire.
+  //
+  // NOTE: raw 0 is NOT routed here any more -- 0 is the mid non-spell
+  // (see the evidence chain above), so it takes the normal ovl_boss_have
+  // path and HINT_PAT_IDX becomes 0.
+  mov dword ptr [HINT_PAT_ON], 0
+  jmp ovl_boss_done
+ovl_boss_have:
+  cmp eax, [HINT_PAT_SKIP]
+  je ovl_boss_suppress
+  mov dword ptr [HINT_PAT_SKIP], FFFFFFFF
+  cmp eax, [HINT_PAT_IDX]
+  je ovl_boss_tick
+  // A new pattern: restart the pattern-local clock.
+  mov [HINT_PAT_IDX], eax
+  mov [HINT_PAT_LAST], eax
+  mov dword ptr [HINT_PAT_FRAME], 0
+  mov dword ptr [HINT_PAT_ON], 1
+  jmp ovl_boss_done
+ovl_boss_tick:
+  // The pattern-local frame count is OUR OWN counter, incremented once per
+  // frame, and NOT a delta on [stage+0x4C].  That stage timer FREEZES for
+  // the duration of the intro dialogue (measured: 13 frames over 55 seconds
+  // across the mid non-spell), so a delta on it would sit near zero for the
+  // whole first pattern of a fight and boss:P:F could never fire.
+  inc dword ptr [HINT_PAT_FRAME]
+  mov dword ptr [HINT_PAT_ON], 1
+  jmp ovl_boss_done
+ovl_boss_suppress:
+  mov dword ptr [HINT_PAT_ON], 0
+  jmp ovl_boss_done
+ovl_boss_clear:
+  mov dword ptr [HINT_PAT_ON], 0
+  mov dword ptr [HINT_PAT_WAS], 0
+  mov dword ptr [HINT_PAT_IDX], 0
+ovl_boss_done:
+  // Mirror into the read-only Pattern row.  Deliberately a mirror of
+  // HINT_PAT_IDX and not a second read of the game: the row must show what
+  // the hint logic is actually using, or it is useless for working out
+  // which number to write in a boss:P:F window.
+  //
+  // Mid-stage it shows -1, NOT 0.  Pattern 0 is a real pattern (the mid
+  // non-spell), so "no boss" has to be a different value or the two are
+  // indistinguishable -- exactly the trap that made a boss:0 window light
+  // up in the middle of the mid-stage.
+  mov eax, [HINT_PAT_IDX]
+  cmp dword ptr [HINT_PAT_ON], 0
+  jne ovl_boss_mirror
+  mov eax, FFFFFFFF
+ovl_boss_mirror:
+  mov [OVL_V_PATTERN], eax
+  // ---- the physical keyboard, into our own 256-byte buffer ----
+  push OVL_VKBUF
+  call dword ptr [KBD_IAT]
+  movzx eax, byte ptr [OVL_VKBUF+7B]
+  mov [PRB_F12], eax
+  // ---- F12 (VK 7B) rising edge toggles the menu ----
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_F12]
+  mov byte ptr [OVL_PREV_F12], al
+  cmp al, cl
+  je ovl_toggle_done
+  test al, al
+  jz ovl_toggle_done
+  xor dword ptr [OVERLAY_OPEN], 1
+  inc dword ptr [PRB_F12N]
+ovl_toggle_done:
+  mov eax, [OVERLAY_OPEN]
+  mov [PRB_OPEN], eax
+  // NOTE: the old "freeze while the menu is open" switch lived here.  It
+  // was never verified (see plan-hint.md 19) and the user asked for it to
+  // be dropped, so the row and this branch are both gone.
+  cmp eax, 0
+  jne ovl_menu_open
+  // Closed: forget the edges and the held key so reopening starts clean,
+  // and make sure the Seed row is showing its normal label again.
+  mov dword ptr [OVL_PREV_KEYS], 0
+  mov dword ptr [OVL_PREV_KEYS+4], 0
+  call ovl_type_exit
+  call ovl_reset_hold
+  jmp ovl_logic_done
+ovl_menu_open:
+  mov al, byte ptr [OVL_VKBUF+26]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+0]
+  mov byte ptr [OVL_PREV_KEYS+0], al
+  cmp al, cl
+  je ovl_up_done
+  test al, al
+  jz ovl_up_done
+  call ovl_move_up
+ovl_up_done:
+  mov al, byte ptr [OVL_VKBUF+28]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+1]
+  mov byte ptr [OVL_PREV_KEYS+1], al
+  cmp al, cl
+  je ovl_down_done
+  test al, al
+  jz ovl_down_done
+  call ovl_move_down
+ovl_down_done:
+  mov al, byte ptr [OVL_VKBUF+25]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+2]
+  mov byte ptr [OVL_PREV_KEYS+2], al
+  cmp al, cl
+  je ovl_left_done
+  test al, al
+  jz ovl_left_done
+  call ovl_move_left
+ovl_left_done:
+  mov al, byte ptr [OVL_VKBUF+27]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+3]
+  mov byte ptr [OVL_PREV_KEYS+3], al
+  cmp al, cl
+  je ovl_right_done
+  test al, al
+  jz ovl_right_done
+  call ovl_move_right
+ovl_right_done:
+  // ---- held LEFT/RIGHT: after OVL_HOLD_DELAY frames, fine-step by 1 --
+  mov dl, byte ptr [OVL_VKBUF+27]
+  and dl, 80
+  jz ovl_hold_not_right
+  mov ecx, 1
+  jmp ovl_hold_check
+ovl_hold_not_right:
+  mov dl, byte ptr [OVL_VKBUF+25]
+  and dl, 80
+  jz ovl_hold_none
+  mov ecx, 2
+ovl_hold_check:
+  cmp ecx, [OVL_HOLD_DIR]
+  jne ovl_hold_new
+  inc dword ptr [OVL_HOLD_N]
+  mov eax, [OVL_HOLD_N]
+  cmp eax, [OVL_HOLD_DELAY]
+  jl ovl_hold_done
+  inc dword ptr [OVL_NUDGE_N]
+  mov eax, [OVL_NUDGE_N]
+  cmp eax, [OVL_NUDGE_EVERY]
+  jl ovl_hold_done
+  mov dword ptr [OVL_NUDGE_N], 0
+  cmp ecx, 1
+  jne ovl_hold_left
+  call ovl_nudge_right
+  jmp ovl_hold_done
+ovl_hold_left:
+  call ovl_nudge_left
+  jmp ovl_hold_done
+ovl_hold_new:
+  mov [OVL_HOLD_DIR], ecx
+  mov dword ptr [OVL_HOLD_N], 0
+  mov dword ptr [OVL_NUDGE_N], 0
+  jmp ovl_hold_done
+ovl_hold_none:
+  call ovl_reset_hold
+ovl_hold_done:
+  // ---- Lock Seed rising edge: adopt the seed already in use ----------
+  // Deliberately SEED_USED (what the RNG was actually seeded with at this
+  // stage's start) and NOT the seed global at 0xEDDFF4.  Measured: the
+  // global is stable during play but does NOT hold the seed the RNG got --
+  // a second code path (0x72E39) overwrites it with a bare A*A right after
+  // the stage scene is built.  SEED_USED is the value handed to the seed
+  // wrapper, which is the thing a replay has to reproduce.
+  mov eax, [SEED_ON]
+  cmp eax, [OVL_PREV_SEEDSW]
+  je ovl_seedsw_done
+  mov [OVL_PREV_SEEDSW], eax
+  test eax, eax
+  jz ovl_seedsw_done
+  mov eax, [SEED_USED]
+  mov [SEL_SEED], eax
+ovl_seedsw_done:
+  // Capture is triggered by Z on its row (see ovl_type_toggle), so its
+  // value is read-only and just shows how many lines have been written.
+  // ---- the Seed row's direct digit entry ----
+  call ovl_type_keys
+  // ---- suppress the game's own keyboard input while the menu is open --
+  // The game rebuilds KEYSHADOW from GetKeyboardState earlier in the
+  // frame, so clearing it here means gameplay sees nothing pressed.
+  xor eax, eax
+  mov ecx, 40
+  mov edi, KEYSHADOW
+ovl_clear:
+  mov [edi], eax
+  add edi, 4
+  dec ecx
+  jnz ovl_clear
+ovl_logic_done:
+  popad
+  popfd
+  ret
+
+ovl_move_up:
+  mov eax, [OVL_CUR]
+  dec eax
+  jns ovl_up_ok
+  mov eax, [OVL_ROWS_N]
+  dec eax
+ovl_up_ok:
+  mov [OVL_CUR], eax
+  ret
+
+ovl_move_down:
+  mov eax, [OVL_CUR]
+  inc eax
+  cmp eax, [OVL_ROWS_N]
+  jl ovl_down_ok
+  xor eax, eax
+ovl_down_ok:
+  mov [OVL_CUR], eax
+  ret
+
+// A row is six dwords: text, value pointer, min, max, step, wrap.
+// `wrap` = 1 -> stepping past an end jumps to the other end (a switch);
+//          0 -> stepping past an end stops there (a wide range, so the
+//               held-key nudge below can land on an exact value).
+//
+// ovl_row: esi = &OVL_ROWS[OVL_CUR]
+ovl_row:
+  mov esi, [OVL_CUR]
+  imul esi, esi, 18
+  add esi, OVL_ROWS
+  ret
+
+// ovl_apply: esi = row pointer, edx = signed delta.
+// The range checks are UNSIGNED: the Seed row's max is FFFFFFFF, which as a
+// signed value is -1, so a signed compare would make RIGHT clamp to
+// FFFFFFFF from anywhere.  Every other row has max <= 65535, where signed
+// and unsigned agree, so this is a strict widening.
+ovl_apply:
+  mov eax, [esi+4]
+  mov ecx, [eax]
+  add ecx, edx
+  cmp ecx, [esi+0C]
+  jbe ovl_apply_lo
+  cmp dword ptr [esi+14], 0
+  je ovl_apply_hi_clamp
+  mov ecx, [esi+8]
+  jmp ovl_apply_store
+ovl_apply_hi_clamp:
+  mov ecx, [esi+0C]
+  jmp ovl_apply_store
+ovl_apply_lo:
+  cmp ecx, [esi+8]
+  jae ovl_apply_store
+  cmp dword ptr [esi+14], 0
+  je ovl_apply_lo_clamp
+  mov ecx, [esi+0C]
+  jmp ovl_apply_store
+ovl_apply_lo_clamp:
+  mov ecx, [esi+8]
+ovl_apply_store:
+  mov [eax], ecx
+  ret
+
+// While the seed row is in typing mode the arrow keys must not fight the
+// digits, so all four value-movers bail out through one shared exit.
+ovl_move_right:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  jne ovl_move_blocked
+  call ovl_row
+  mov edx, [esi+10]
+  jmp ovl_apply
+
+ovl_move_left:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  jne ovl_move_blocked
+  call ovl_row
+  mov edx, [esi+10]
+  neg edx
+  jmp ovl_apply
+
+ovl_nudge_right:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  jne ovl_move_blocked
+  call ovl_row
+  mov edx, 1
+  jmp ovl_apply
+
+ovl_nudge_left:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  jne ovl_move_blocked
+  call ovl_row
+  mov edx, ffffffff
+  jmp ovl_apply
+
+ovl_move_blocked:
+  ret
+
+ovl_reset_hold:
+  mov dword ptr [OVL_HOLD_DIR], 0
+  mov dword ptr [OVL_HOLD_N], 0
+  mov dword ptr [OVL_NUDGE_N], 0
+  ret
+
+// ================= seed row: direct digit entry ===================== //
+// The overlay already reads GetKeyboardState into OVL_VKBUF, so digits are
+// just VK 30..39.  Typing beats nudging for a 32-bit value: 4294967295 is
+// ten digits, and no step size makes that pleasant.
+//
+//   Z        enter typing (cursor on the Seed row) / commit
+//   digits   append; the FIRST digit replaces the old value
+//   BACK(08) drop the last digit
+//   ESC      cancel, restore the value you started with
+//
+// Edge detection for all ten digits with one state word: remember the VK of
+// the digit currently held, and only act when a *different* one goes down.
+// That also handles rolling from 5 to 6 without releasing 5.
+ovl_type_keys:
+  // ---- Z (5A) ----
+  mov al, byte ptr [OVL_VKBUF+5A]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+4]
+  mov byte ptr [OVL_PREV_KEYS+4], al
+  cmp al, cl
+  je ovl_type_z_done
+  test al, al
+  jz ovl_type_z_done
+  call ovl_type_toggle
+ovl_type_z_done:
+  // ---- ESC (1B) ----
+  mov al, byte ptr [OVL_VKBUF+1B]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+5]
+  mov byte ptr [OVL_PREV_KEYS+5], al
+  cmp al, cl
+  je ovl_type_esc_done
+  test al, al
+  jz ovl_type_esc_done
+  call ovl_type_cancel
+ovl_type_esc_done:
+  // ---- BACK (08) ----
+  mov al, byte ptr [OVL_VKBUF+08]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_KEYS+6]
+  mov byte ptr [OVL_PREV_KEYS+6], al
+  cmp al, cl
+  je ovl_type_back_done
+  test al, al
+  jz ovl_type_back_done
+  cmp dword ptr [OVL_TYPE_ON], 0
+  je ovl_type_back_done
+  mov eax, [SEL_SEED]
+  xor edx, edx
+  mov ecx, 0A
+  div ecx
+  mov [SEL_SEED], eax
+ovl_type_back_done:
+  // ---- digits ----
+  cmp dword ptr [OVL_TYPE_ON], 0
+  je ovl_type_digits_done
+  // ebx tracks whether ANY digit is currently down.  Only when none is
+  // down may OVL_TYPE_LAST be cleared -- clearing it at the end of the
+  // scan while a key is still held makes the very next call see a fresh
+  // press, which doubles every digit (the overlay runs twice per frame).
+  xor ebx, ebx
+  mov ecx, 30
+ovl_type_digit_loop:
+  movzx eax, byte ptr [OVL_VKBUF+ecx]
+  and al, 80
+  jz ovl_type_digit_next
+  mov ebx, 1
+  cmp ecx, [OVL_TYPE_LAST]
+  je ovl_type_digit_next
+  mov [OVL_TYPE_LAST], ecx
+  mov edx, ecx
+  sub edx, 30
+  call ovl_type_append
+  jmp ovl_type_digits_done
+ovl_type_digit_next:
+  inc ecx
+  cmp ecx, 3A
+  jl ovl_type_digit_loop
+  test ebx, ebx
+  jnz ovl_type_digits_done
+  mov dword ptr [OVL_TYPE_LAST], 0
+ovl_type_digits_done:
+  ret
+
+// Z.  Which row the cursor is on decides what it does:
+//   any 0..1 row   -> flip it (these render as on/off)
+//   the Seed row   -> enter/commit direct digit entry
+//   the Capture row-> capture the current spot once
+// EVERY case is decided from the row DESCRIPTOR -- its value pointer, or
+// its min/max range -- and never from a row INDEX.  Hard-coded indices are
+// exactly what once made the Capture row render the Seed label and steal
+// its digit entry, the moment the hint rows were inserted above the seed
+// rows.  With this form, reordering the table cannot break the dispatch.
+ovl_type_toggle:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  jne ovl_type_commit
+  call ovl_row
+  cmp dword ptr [esi+0C], 1
+  jne ovl_type_try_seed
+  cmp dword ptr [esi+8], 0
+  jne ovl_type_try_seed
+  mov eax, [esi+4]
+  mov ecx, [eax]
+  xor ecx, 1
+  mov [eax], ecx
+  ret
+ovl_type_try_seed:
+  mov eax, SEL_SEED
+  cmp [esi+4], eax
+  jne ovl_type_try_capture
+  mov eax, [SEL_SEED]
+  mov [OVL_TYPE_OLD], eax
+  mov dword ptr [OVL_TYPE_FRESH], 1
+  mov dword ptr [OVL_TYPE_LAST], 0
+  mov dword ptr [OVL_TYPE_ON], 1
+  // Remember WHICH row is in typing mode, so restoring its label later
+  // needs no row index either.
+  mov [OVL_TYPE_ROW], esi
+  mov eax, TXT_OVL_SEED_EDIT
+  mov [esi], eax
+  ret
+ovl_type_try_capture:
+  mov eax, OVL_V_CAPTURE
+  cmp [esi+4], eax
+  jne ovl_type_toggle_done
+  call hint_capture
+  cmp dword ptr [HINT_CAP_OK], 0
+  je ovl_type_toggle_done
+  inc dword ptr [OVL_V_CAPTURE]
+  ret
+ovl_type_commit:
+  // Committing a hand-typed seed switches the lock on -- you typed it, so
+  // you want it used -- and arms the edge detector so the Lock Seed row
+  // does not immediately grab the current seed over the top of it.
+  // (To grab instead, toggle Lock Seed off and on again.)
+  mov dword ptr [SEED_ON], 1
+  mov dword ptr [OVL_PREV_SEEDSW], 1
+  jmp ovl_type_exit
+ovl_type_exit:
+  mov dword ptr [OVL_TYPE_ON], 0
+  mov dword ptr [OVL_TYPE_LAST], 0
+  mov ecx, [OVL_TYPE_ROW]
+  test ecx, ecx
+  jz ovl_type_toggle_done
+  mov eax, TXT_OVL_SEED
+  mov [ecx], eax
+ovl_type_toggle_done:
+  ret
+
+ovl_type_cancel:
+  cmp dword ptr [OVL_TYPE_ON], 0
+  je ovl_type_cancel_done
+  mov eax, [OVL_TYPE_OLD]
+  mov [SEL_SEED], eax
+  jmp ovl_type_exit
+ovl_type_cancel_done:
+  ret
+
+// edx = the digit (0..9).  Append to SEL_SEED, clamped at FFFFFFFF.
+// The first digit after entering typing mode replaces the value, so you do
+// not have to backspace away a previous seed before typing a new one.
+ovl_type_append:
+  cmp dword ptr [OVL_TYPE_FRESH], 0
+  je ovl_type_app_shift
+  mov dword ptr [OVL_TYPE_FRESH], 0
+  mov [SEL_SEED], edx
+  ret
+ovl_type_app_shift:
+  mov eax, [SEL_SEED]
+  cmp eax, 19999999
+  ja ovl_type_app_done
+  jne ovl_type_app_room
+  cmp edx, 5
+  ja ovl_type_app_done
+ovl_type_app_room:
+  imul eax, eax, 0A
+  add eax, edx
+  mov [SEL_SEED], eax
+ovl_type_app_done:
+  ret
+
+ovl_getColor:
+  // eax = row index; the selected row draws dark, the rest bright.
+  cmp eax, [OVL_CUR]
+  je ovl_color_sel
+  mov eax, FF
+  ret
+ovl_color_sel:
+  xor eax, eax
+  ret
+
+overlay_draw:
+  pushfd
+  pushad
+  inc dword ptr [PRB_BLIT]
+  // Draw once per frame at most: several blit sites may fire, and the
+  // overlay must not be painted N times on top of itself.
+  cmp dword ptr [OVL_DRAWN], 0
+  jne ovl_draw_done
+  mov dword ptr [OVL_DRAWN], 1
+  // ---- the self-machine cross first, so hint markers and the panel sit
+  //      on top of it.  Independent of the Hint switch (v0.7.7). ----
+  call draw_pcross
+  // ---- hint markers next, so the panel sits on top of them ----
+  cmp dword ptr [OVL_V_HINT], 0
+  je ovl_draw_panel
+  call draw_hints
+ovl_draw_panel:
+  cmp dword ptr [OVERLAY_OPEN], 0
+  je ovl_draw_done
+  // ---- the panel.  box(x1,y1,x2,y2,colour,filled) is cdecl with six
+  //      args; we pass both values of `filled` so we get the solid pass
+  //      whichever of the two inner primitives actually fills.
+  push 1
+  push 0
+  push E8
+  push F0
+  push 10
+  push 10
+  call box
+  push 0
+  push ff
+  push E8
+  push F0
+  push 10
+  push 10
+  call box
+  add esp, 30
+  // ---- title: shadow at (19,19), then the real one at (18,18) ----
+  push 0
+  push TXT_OVL_TITLE
+  push 0
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push 19
+  push 19
+  call drawTextTexture
+  add esp, 14
+  push 0
+  push TXT_OVL_TITLE
+  push ff
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push 18
+  push 18
+  call drawTextTexture
+  add esp, 14
+  // ---- rows ----
+  // The row cursor lives in MEMORY and is reloaded every iteration.
+  // getTextTexture / drawTextTexture are game functions and this engine's
+  // drawing helpers do NOT preserve ecx/edx/esi (box() clobbers them too).
+  // Holding the cursor in a register across those calls is exactly what made
+  // one row render another row's label.
+  mov dword ptr [OVL_RCUR], 0
+ovl_draw_row:
+  mov eax, [OVL_RCUR]
+  cmp eax, [OVL_ROWS_N]
+  jge ovl_draw_done
+  imul eax, eax, 18
+  add eax, OVL_ROWS
+  mov [OVL_RPTR], eax
+  mov eax, [OVL_RCUR]
+  imul eax, eax, 10
+  add eax, 28
+  mov [OVL_RY], eax
+  // ---- pick this row's label ----
+  // OVL_ALT is a parallel array, one dword per row.  0 -> the row keeps
+  // its own format string (a number).  Otherwise it points at a 2-dword
+  // {text_if_0, text_if_1} pair, and the row renders that instead -- which
+  // is how a 0/1 switch reads "off"/"on".  The value is still pushed as
+  // the format argument either way; a string with no %d just ignores it.
+  mov esi, [OVL_RPTR]
+  mov eax, [esi+4]
+  mov ecx, [eax]
+  mov eax, [OVL_RCUR]
+  mov eax, [OVL_ALT+eax*4]
+  test eax, eax
+  jz ovl_pick_plain
+  and ecx, 1
+  mov eax, [eax+ecx*4]
+  jmp ovl_pick_done
+ovl_pick_plain:
+  mov eax, [esi]
+ovl_pick_done:
+  mov [OVL_RTXT], eax
+  // shadow
+  mov esi, [OVL_RPTR]
+  mov eax, [esi+4]
+  push dword ptr [eax]
+  push dword ptr [OVL_RTXT]
+  push 0
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  mov eax, [OVL_RY]
+  inc eax
+  push eax
+  push 19
+  call drawTextTexture
+  add esp, 14
+  // the row itself
+  mov esi, [OVL_RPTR]
+  mov eax, [esi+4]
+  push dword ptr [eax]
+  push dword ptr [OVL_RTXT]
+  mov eax, [OVL_RCUR]
+  call ovl_getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push dword ptr [OVL_RY]
+  push 18
+  call drawTextTexture
+  add esp, 14
+  inc dword ptr [OVL_RCUR]
+  jmp ovl_draw_row
+ovl_draw_done:
+  popad
+  popfd
+  ret
+
+// =================================================================== //
+// v0.4.0 -- the two game-side hooks.                                 //
+// =================================================================== //
+
+// ---- No Gameover ---------------------------------------------------- //
+// (Called "No Gameover" rather than "No Miss" because it does not stop
+//  you being hit -- it stops the hit from ending the run.)
+// Entered from game+B980C, which vanilla spells
+//     cmp dword ptr [eax+0x48], 0
+//     jg  game+B9840          ; lives left -> die and respawn
+//     ...                     ; else -> GAME OVER
+// eax is already the player object, and the shared `dec [eax+0x48]`
+// happens later at game+B9894 with nothing reading the field in between
+// (verified by a full .text sweep).
+//
+// v0.7.5 -- lives are NO LONGER smashed to 0.
+// The old form wrote 1 unconditionally, so the shared `dec` landed on 0
+// and the very first hit took you from N lives straight to 0 (and every
+// later hit kept it there).  The user called that out as a nasty side
+// effect: the feature was fine, the wrecked HUD was not.
+//
+// Now the two cases are separated, which is what vanilla itself does:
+//   * lives > 0 -- take the ordinary death path and let the shared `dec`
+//     run, so the counter ticks down exactly like vanilla (3 -> 2 -> 1).
+//   * lives == 0 -- this is the hit vanilla would have ended the run on.
+//     Fake 1 so the `dec` lands back on 0: the death/respawn animation
+//     plays and you keep playing with 0 lives.
+// So the counter never goes negative, it only ever reaches 0 the way the
+// game itself would, and the run simply never ends.
+//
+// The important property is unchanged: with the switch OFF this reproduces
+// the original two instructions byte for byte, and with it ON lives > 0
+// still takes the ORIGINAL path -- only the would-have-been-GAME-OVER case
+// differs.  So a replay is still frame-accurate right up to the first
+// fatal hit, and the life counter itself matches vanilla until 0.
+nogameover_hook:
+  cmp dword ptr [OVL_V_NOGAMEOVER], 0
+  je nogameover_vanilla
+  cmp dword ptr [eax+48], 0
+  jg nogameover_count
+  mov dword ptr [eax+48], 1
+nogameover_count:
+  inc dword ptr [NOSORE_DEBT]
+  inc dword ptr [PRB_NOGAMEOVER]
+  jmp game+B9840
+nogameover_vanilla:
+  cmp dword ptr [eax+48], 0
+  jg game+B9840
+  jmp game+B9812
+
+// ---- freeze power (locks onto whatever power you currently have) ---- //
+// Replaces the vanilla clamp that closes the player update:
+//     mov eax, [edi]
+//     cmp [eax+0x7c], 0      / jge / mov [eax+0x7c], 0
+//     mov eax, [edi]
+//     cmp [eax+0x7c], 0x1f4  / jl  / mov [eax+0x7c], 0x1f4
+//
+// There is no value to type in: the first frame after the switch goes on
+// captures the live power into OVL_LP_TARGET, and every frame after that
+// stores it back.  So power becomes genuinely static -- pickups cannot
+// raise it and hits cannot lower it.  Switching it off re-arms the
+// capture, so toggling it re-locks to the power you have right then.
+// The vanilla path is kept verbatim for when the lock is off.
+ovl_lockpower:
+  mov eax, [edi]
+  // Diagnostic mirror: remember the live player object so an external
+  // tool can read lives/power straight out of the game (and so the
+  // later seed/hint work has a pointer to hang off).  One store into
+  // our own scratch memory, no game state touched.
+  mov [DBG_PLAYER], eax
+  cmp dword ptr [OVL_V_LOCKPWR], 0
+  jne ovl_lp_on
+  mov dword ptr [OVL_LP_HELD], 0
+  jmp ovl_lp_vanilla
+ovl_lp_on:
+  cmp dword ptr [OVL_LP_HELD], 0
+  jne ovl_lp_pin
+  mov edx, [eax+7C]
+  mov dword ptr [OVL_LP_TARGET], edx
+  mov dword ptr [OVL_LP_HELD], 1
+ovl_lp_pin:
+  mov edx, [OVL_LP_TARGET]
+  mov dword ptr [eax+7C], edx
+  inc dword ptr [PRB_LP]
+  jmp game+B9B26
+ovl_lp_vanilla:
+  cmp dword ptr [eax+7C], 0
+  jge ovl_lp_hi
+  mov dword ptr [eax+7C], 0
+ovl_lp_hi:
+  cmp dword ptr [eax+7C], 1F4
+  jl ovl_lp_done
+  mov dword ptr [eax+7C], 1F4
+ovl_lp_done:
+  jmp game+B9B26
+
+// ---- seed lock ------------------------------------------------------ //
+// Entered via `call` from game+B2BD9.  On entry [esp] = return address and
+// [esp+4] = the seed the game pushed.  We deliberately do NOT rewrite that
+// stack slot: we push our own value for the wrapper call instead, so the
+// caller's frame is never touched (the game's own `add esp,4` at 0xB2BDE
+// still pops its stale argument).
+//
+// Registers are saved one at a time rather than with pushad, because we
+// need the caller's EDI *live* for the [edi+0x3C] write -- reading it out
+// of a pushad slot means depending on the slot order, and getting that
+// wrong writes the seed to an arbitrary address.
+//
+// NOTE every literal is HEX.  pushfd plus the five pushes below cover
+// 6*4 = 24 bytes, so the game's argument -- at [esp+4] on entry -- ends up
+// at [esp+1C] (that is 28 DECIMAL).  Writing `28` means 0x28 = 40 and reads
+// the stale dword 12 bytes ABOVE the argument, seeding the RNG with
+// something that is NOT the game's seed; that silently breaks replay
+// determinism because the recording used the real seed.  Keep it 1C.
+seed_hook:
+  pushfd
+  push eax
+  push ecx
+  push edx
+  push esi
+  push edi
+  mov eax, [esp+1C]
+  cmp dword ptr [SEED_ON], 0
+  je seed_hook_used
+  mov eax, [SEL_SEED]
+  mov dword ptr [edi+3C], eax
+  inc dword ptr [PRB_SEEDON]
+seed_hook_used:
+  mov [SEED_USED], eax
+  inc dword ptr [PRB_SEEDN]
+  push eax
+  call game+D04D0
+  add esp, 4
+  // fingerprint the freshly seeded MT state (VA 0xEC8A90)
+  mov esi, EC8A90
+  mov edi, SEED_FP
+  mov ecx, 10
+seed_fp_loop:
+  mov eax, [esi]
+  mov [edi], eax
+  add esi, 4
+  add edi, 4
+  dec ecx
+  jnz seed_fp_loop
+  pop edi
+  pop esi
+  pop edx
+  pop ecx
+  pop eax
+  popfd
+  xor eax, eax
+  ret
+
+// ---- hint files (v0.6.7) -------------------------------------------- //
+// Enumerates <exe dir>\hint\*.txt and loads every one that applies, so
+// both layouts work with no extra code:
+//   * one file per stage   (first line is the stage number)
+//   * everything merged    ("stage N" lines switch stage mid-file)
+// A file whose NAME contains -easy / -normal / -hard / -unreal is only
+// used on that difficulty; a name with no such tag applies to all of them.
+//
+// Everything is UTF-16 because that is what the W APIs want, and
+// GetModuleFileNameW hands us the exe path in exactly that form.
+//
+// Called once per stage.  Preserves all registers.
+load_hints:
+  pushfd
+  pushad
+  mov dword ptr [HINT_N], 0
+  mov dword ptr [HINT_SKIP], 0
+  // The stage the parser keeps.  Prefer the REAL stage the game is running:
+  // the stage object carries it at +0x30 (the game copies it there from the
+  // global 0xEDDFF0 while setting the stage up -- see the disassembly at
+  // RVA 0xB2CB5), and DBG_STAGE is that very object, stored by our
+  // initFrameTimer hook immediately above.  This is also correct in a full
+  // run, where SEL_STAGE would still read 1 forever.
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb load_hints_selstage
+  cmp eax, 7FFF0000
+  ja load_hints_selstage
+  mov eax, [eax+30]
+  test eax, eax
+  jz load_hints_selstage
+  cmp eax, 9
+  jbe load_hints_want
+load_hints_selstage:
+  // Fallback: the practice menu's selection.  SEL_STAGE is 0-based (it
+  // indexes SECTION_CNT / MAX_PATTERNID; the menu displays it + 1).
+  mov eax, [SEL_STAGE]
+  inc eax
+  cmp eax, 9
+  jbe load_hints_want
+  xor eax, eax
+load_hints_want:
+  mov [HINT_WANT], eax
+  // ---- 1. the exe's own path ----
+  push 104
+  push HINT_PATHW
+  push 0
+  call dword ptr [MODULE_IAT]
+  test eax, eax
+  jz load_hints_done
+  // ---- 2. find the last backslash so we can keep the directory ----
+  mov esi, HINT_PATHW
+  mov ecx, eax
+  xor edx, edx
+  xor ebx, ebx
+load_hints_scan:
+  cmp ebx, ecx
+  jae load_hints_cut
+  cmp word ptr [esi], 5C
+  jne load_hints_next
+  mov edx, ebx
+load_hints_next:
+  add esi, 2
+  inc ebx
+  jmp load_hints_scan
+load_hints_cut:
+  inc edx
+  mov edi, HINT_PATHW
+  lea edi, [edi+edx*2]
+  // ---- 3. append "hint\" and remember how long the prefix is ----
+  mov esi, HINT_PRE
+  mov ecx, 5
+load_hints_p1:
+  mov ax, [esi]
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  dec ecx
+  jnz load_hints_p1
+  add edx, 5
+  mov [HINT_PRELEN], edx
+  // ---- 4. append the search pattern and start enumerating ----
+  mov esi, HINT_GLOB
+  mov ecx, 5
+load_hints_p2:
+  mov ax, [esi]
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  dec ecx
+  jnz load_hints_p2
+  mov word ptr [edi], 0
+  push HINT_FIND
+  push HINT_PATHW
+  call dword ptr [FINDFIRST_IAT]
+  cmp eax, ffffffff
+  je load_hints_done
+  mov [HINT_FH], eax
+load_hints_loop:
+  call hint_diff_ok
+  test eax, eax
+  jz load_hints_skip
+  call hint_build_path
+  call hint_read_one
+  call parse_hints
+load_hints_skip:
+  push HINT_FIND
+  push dword ptr [HINT_FH]
+  call dword ptr [FINDNEXT_IAT]
+  test eax, eax
+  jnz load_hints_loop
+  push dword ptr [HINT_FH]
+  call dword ptr [FINDCLOSE_IAT]
+load_hints_done:
+  popad
+  popfd
+  ret
+
+// hint_build_path: HINT_PATHW = <dir>\hint\ + cFileName.
+// The first HINT_PRELEN WCHARs are the prefix and are never overwritten,
+// so copying from the start of the same buffer is safe even on the
+// second and later files (when the tail no longer holds the pattern).
+hint_build_path:
+  pushad
+  mov esi, HINT_PATHW
+  mov edi, HINT_PATHW
+  mov ecx, [HINT_PRELEN]
+hint_bp_copy:
+  mov ax, [esi]
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  dec ecx
+  jnz hint_bp_copy
+  mov esi, HINT_FIND
+  add esi, 2C
+hint_bp_name:
+  mov ax, [esi]
+  test ax, ax
+  jz hint_bp_done
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  jmp hint_bp_name
+hint_bp_done:
+  mov word ptr [edi], 0
+  popad
+  ret
+
+// hint_diff_ok: does this file apply to the current difficulty?
+// Scans cFileName for -easy/-normal/-hard/-unreal (case-folded by ORing
+// bit 5 into each UTF-16 unit).  No tag -> applies to every difficulty.
+// -> eax = 1 to load, 0 to skip.
+hint_diff_ok:
+  pushad
+  mov esi, HINT_FIND
+  add esi, 2C
+hint_diff_scan:
+  mov ax, [esi]
+  test ax, ax
+  jz hint_diff_none
+  cmp ax, 2D
+  jne hint_diff_next
+  mov eax, [esi+2]
+  or eax, 200020
+  cmp eax, 610065
+  je hint_diff_easy
+  cmp eax, 6F006E
+  je hint_diff_normal
+  cmp eax, 610068
+  je hint_diff_hard
+  cmp eax, 6E0075
+  je hint_diff_unreal
+hint_diff_next:
+  add esi, 2
+  jmp hint_diff_scan
+hint_diff_easy:
+  xor ebx, ebx
+  jmp hint_diff_cmp
+hint_diff_normal:
+  mov ebx, 1
+  jmp hint_diff_cmp
+hint_diff_hard:
+  mov ebx, 2
+  jmp hint_diff_cmp
+hint_diff_unreal:
+  mov ebx, 3
+hint_diff_cmp:
+  mov eax, [SEL_DIFF]
+  cmp eax, 3
+  jbe hint_diff_have
+  xor eax, eax
+hint_diff_have:
+  cmp ebx, eax
+  jne hint_diff_no
+  mov dword ptr [HINT_OK], 1
+  jmp hint_diff_out
+hint_diff_none:
+  mov dword ptr [HINT_OK], 1
+  jmp hint_diff_out
+hint_diff_no:
+  mov dword ptr [HINT_OK], 0
+hint_diff_out:
+  popad
+  mov eax, [HINT_OK]
+  ret
+
+// hint_read_one: slurp HINT_PATHW into HINT_BUF, set HINT_LEN.
+hint_read_one:
+  pushad
+  mov dword ptr [HINT_LEN], 0
+  mov dword ptr [HINT_GOT], 0
+  push 0
+  push 80
+  push 3
+  push 0
+  push 1
+  push 80000000
+  push HINT_PATHW
+  call dword ptr [FILE_IAT]
+  cmp eax, ffffffff
+  je hint_read_done
+  mov [HINT_HANDLE], eax
+  push 0
+  push HINT_GOT
+  push dword ptr [HINT_BUFMAX]
+  push HINT_BUF
+  push eax
+  call dword ptr [READ_IAT]
+  mov eax, [HINT_GOT]
+  mov [HINT_LEN], eax
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [CLOSE_IAT]
+hint_read_done:
+  popad
+  ret
+
+// ---- hint markers (v0.6.3) ------------------------------------------ //
+// Walks HINT_ARR and draws every entry whose time window contains the
+// current stage frame.  Two shapes, chosen by the entry's marker char:
+//   '+'  a crosshair, drawn as two filled rectangles
+//   '-'  a full-width horizontal dashed line (a "safe line")
+// box() is used rather than drawTextTexture because that helper takes
+// (fmt, value, colour, x, y) and has NO size argument at all.
+//
+// box() is a game function and does not preserve ecx/edx/esi, so every
+// coordinate is reloaded from memory for each rectangle.  Relying on the
+// registers surviving a call silently drew the second bar off-screen.
+//
+// Entry layout (0x30 = 48 bytes):
+//   +00 mark  +04 size  +08 char  +0C x  +10 y
+//   +14 start kind  +18 start pattern  +1C start frame
+//   +20 end kind    +24 end pattern    +28 end frame
+//
+// v0.7.5 -- BOTH bounds are HALF-OPEN: the window is the set of positions
+// (pattern, frame) with start <= pos < end.  The end bound is therefore
+// exclusive, which makes "boss:N:0" as the END mean "until pattern N
+// starts" -- i.e. exactly "until the pattern before it ends" -- and that is
+// what the F2 capture writes.  The previous inclusive end stayed open for
+// the first frame of the end pattern, which showed the mid non-spell hint
+// bleeding into the mid spell (and the spell-1 hint into non 2).
+draw_hints:
+  pushfd
+  pushad
+  mov dword ptr [HINT_CUR], 0
+  // The player's playfield position, once: it is both the fade reference
+  // and what the calibration mirrors report.  DBG_PLAYER is only refreshed
+  // while a stage is running, so range-check it.
+  mov dword ptr [DBG_PX], 0
+  mov dword ptr [DBG_PY], 0
+  mov eax, [DBG_PLAYER]
+  cmp eax, 10000
+  jb draw_hints_loop
+  cmp eax, 7FFF0000
+  ja draw_hints_loop
+  mov eax, [eax]
+  cmp eax, 10000
+  jb draw_hints_loop
+  cmp eax, 7FFF0000
+  ja draw_hints_loop
+  cvttss2si ecx, dword ptr [eax]
+  cvttss2si edx, dword ptr [eax+4]
+  mov [DBG_PX], ecx
+  mov [DBG_PY], edx
+draw_hints_loop:
+  mov eax, [HINT_CUR]
+  cmp eax, [HINT_N]
+  jae draw_hints_done
+  imul eax, eax, 30
+  add eax, HINT_ARR
+  mov [HINT_ROW], eax
+  // ---- character filter ----
+  // Entry +8 is 0 for "every character", else 1..4.  CHAR_IDX is the game
+  // global the practice menu's per-character bomb default reads
+  // (game+ADDFEC, 0-based).  NOTE: that mapping is inherited from le03 and
+  // reads 0 for the default character, so a per-character hint is only as
+  // trustworthy as that global -- see the README.
+  mov eax, [HINT_ROW]
+  cmp dword ptr [eax+8], 0
+  je draw_hints_char_ok
+  mov ecx, [game+ADDFEC]
+  inc ecx
+  cmp ecx, [eax+8]
+  jne draw_hints_next
+draw_hints_char_ok:
+  // ---- time window ----
+  // Two forms, and BOTH ends must agree on which one they use.  A mixed
+  // pair (boss start, absolute end) is skipped rather than guessed at --
+  // silently picking one would show the hint at a meaningless time.
+  mov esi, [HINT_ROW]
+  mov eax, [esi+14]
+  cmp eax, [esi+20]
+  jne draw_hints_next
+  test eax, eax
+  jnz draw_hints_boss
+  // ---- form 0: absolute stage frames ----
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb draw_hints_next
+  cmp eax, 7FFF0000
+  ja draw_hints_next
+  mov eax, [eax+4C]
+  cmp eax, [esi+1C]
+  jb draw_hints_next
+  // v0.7.5: exclusive end here too, so the two forms agree.
+  cmp eax, [esi+28]
+  jae draw_hints_next
+  jmp draw_hints_boss_ok
+  // ---- form 1: boss patterns ----
+  // The current position is the pair (pattern index, pattern-relative
+  // frame) and it is compared against (start, end) LEXICOGRAPHICALLY, so
+  // one window may legitimately span several patterns -- e.g. from
+  // boss:2:60 to boss:4:0 covers the tail of pattern 2 and all of 3.
+draw_hints_boss:
+  // Gate on "a boss is on screen", never on the pattern number: pattern 0
+  // is the mid non-spell, so testing the number for zero would throw away
+  // the first pattern of every stage.
+  cmp dword ptr [HINT_PAT_ON], 0
+  je draw_hints_next
+  mov eax, [HINT_PAT_IDX]
+  mov edx, [HINT_PAT_FRAME]
+  cmp eax, [esi+18]
+  jb draw_hints_next
+  ja draw_hints_boss_start
+  cmp edx, [esi+1C]
+  jb draw_hints_next
+draw_hints_boss_start:
+  // ---- v0.7.5: the END bound is EXCLUSIVE (half-open [start, end)) ----
+  // Before this, both ends were inclusive, so a window ending at
+  // boss:4:0 stayed open for the whole first frame of pattern 4.  That is
+  // exactly what the user saw: the mid non-spell window (ending boss:1:0)
+  // still lit through the opening of the mid spell, and the stage-boss
+  // spell-1 window (ending boss:5:0) lit through the opening of non 2.
+  //
+  // The capture output already writes end = boss:<idx+1>:0 for "until
+  // this pattern ends", which is only correct under half-open semantics:
+  // the window must close the instant the NEXT pattern begins.
+  cmp eax, [esi+24]
+  ja draw_hints_next
+  jb draw_hints_boss_ok
+  mov eax, [HINT_PAT_FRAME]
+  cmp eax, [esi+28]
+  jae draw_hints_next
+draw_hints_boss_ok:
+  // ---- colour: dim it when the player is standing on the marker ----
+  mov eax, [DBG_PX]
+  sub eax, [esi+0C]
+  test eax, eax
+  jns draw_hints_adx
+  neg eax
+draw_hints_adx:
+  mov ebx, [DBG_PY]
+  sub ebx, [esi+10]
+  test ebx, ebx
+  jns draw_hints_ady
+  neg ebx
+draw_hints_ady:
+  add eax, ebx
+  mov ecx, [HINT_COL]
+  cmp eax, [HINT_FADE_R]
+  jae draw_hints_col
+  mov ecx, [HINT_COL_DIM]
+draw_hints_col:
+  mov [HINT_USECOL], ecx
+  // ---- marker position: playfield + fix + playfield origin ----
+  mov ecx, [esi+0C]
+  mov edx, [esi+10]
+  mov eax, [HINT_DX]
+  sub eax, 40
+  add ecx, eax
+  mov eax, [HINT_DY]
+  sub eax, 40
+  add edx, eax
+  add ecx, [HINT_OX]
+  add edx, [HINT_OY]
+  mov [HINT_CX], ecx
+  mov [HINT_CY], edx
+  mov eax, [esi+4]
+  mov [HINT_SIZE], eax
+  shr eax, 1
+  mov [HINT_HALF], eax
+  cmp dword ptr [esi], 2D
+  je draw_hints_dash
+  cmp dword ptr [esi], 7C
+  je draw_hints_vline
+  // ---- the crosshair ----
+  mov ecx, [HINT_CX]
+  mov edx, [HINT_CY]
+  mov esi, [HINT_HALF]
+  mov eax, ecx
+  sub eax, esi
+  mov ebx, ecx
+  add ebx, esi
+  mov edi, edx
+  inc edi
+  push 1
+  push dword ptr [HINT_USECOL]
+  push edi
+  push ebx
+  push edx
+  push eax
+  call box
+  add esp, 18
+  mov ecx, [HINT_CX]
+  mov edx, [HINT_CY]
+  mov esi, [HINT_HALF]
+  mov eax, edx
+  sub eax, esi
+  mov ebx, edx
+  add ebx, esi
+  mov edi, ecx
+  inc edi
+  push 1
+  push dword ptr [HINT_USECOL]
+  push ebx
+  push edi
+  push eax
+  push ecx
+  call box
+  add esp, 18
+  jmp draw_hints_next
+  // ---- the dashed safe line ----
+  // Spans the whole playfield width at the marker's y; the marker's x is
+  // irrelevant, which is why the capture tool can still write a point and
+  // you just change the symbol in the txt.
+draw_hints_dash:
+  mov eax, [HINT_SIZE]
+  shr eax, 1
+  test eax, eax
+  jnz draw_hints_dash_len
+  mov eax, 8
+draw_hints_dash_len:
+  mov [HINT_DASHLEN], eax
+  mov eax, [HINT_OX]
+  mov [HINT_CX], eax
+  add eax, 180
+  mov [HINT_DASHEND], eax
+draw_hints_dash_loop:
+  mov eax, [HINT_CX]
+  cmp eax, [HINT_DASHEND]
+  jae draw_hints_next
+  mov ebx, eax
+  add ebx, [HINT_DASHLEN]
+  cmp ebx, [HINT_DASHEND]
+  jbe draw_hints_dash_seg
+  mov ebx, [HINT_DASHEND]
+draw_hints_dash_seg:
+  mov ecx, [HINT_CY]
+  mov edx, ecx
+  inc edx
+  push 1
+  push dword ptr [HINT_USECOL]
+  push edx
+  push ebx
+  push ecx
+  push eax
+  call box
+  add esp, 18
+  mov eax, [HINT_DASHLEN]
+  add eax, eax
+  add [HINT_CX], eax
+  jmp draw_hints_dash_loop
+  // ---- the vertical safe line ('|') ----
+  // The exact mirror of the dash above: it spans the whole playfield
+  // HEIGHT at the marker's x, so the marker's y is irrelevant and only the
+  // x column matters.  Same dash length rule (size/2, gap = dash).
+draw_hints_vline:
+  mov eax, [HINT_SIZE]
+  shr eax, 1
+  test eax, eax
+  jnz draw_hints_vl_len
+  mov eax, 8
+draw_hints_vl_len:
+  mov [HINT_DASHLEN], eax
+  mov eax, [HINT_OY]
+  mov [HINT_CY], eax
+  add eax, 1C0
+  mov [HINT_DASHEND], eax
+draw_hints_vl_loop:
+  mov eax, [HINT_CY]
+  cmp eax, [HINT_DASHEND]
+  jae draw_hints_next
+  mov ebx, eax
+  add ebx, [HINT_DASHLEN]
+  cmp ebx, [HINT_DASHEND]
+  jbe draw_hints_vl_seg
+  mov ebx, [HINT_DASHEND]
+draw_hints_vl_seg:
+  mov ecx, [HINT_CX]
+  mov edx, ecx
+  inc edx
+  push 1
+  push dword ptr [HINT_USECOL]
+  push ebx
+  push edx
+  push eax
+  push ecx
+  call box
+  add esp, 18
+  mov eax, [HINT_DASHLEN]
+  add eax, eax
+  add [HINT_CY], eax
+  jmp draw_hints_vl_loop
+draw_hints_next:
+  inc dword ptr [HINT_CUR]
+  jmp draw_hints_loop
+draw_hints_done:
+  popad
+  popfd
+  ret
+
+// draw_pcross (v0.7.8): the self-machine judgement-point cross ---- //
+// Ported from le03's `Player +` row.  It is drawn from the SAME playfield
+// position, through the SAME transform the hint markers use --
+//     game coord = pos + (Fix - 0x40) + HINT_OX/HINT_OY
+// -- so with Fix X/Y at their neutral 0x40 the cross sits exactly on the
+// judgement dot AND exactly on any hint marker placed there, and one Fix
+// nudge moves both together.  It is gated by its OWN switch, NOT by Hint,
+// so turning the hint markers off does not take the cross away.
+//
+// le02 draws in the game's own 640x480 logical space (box() scales it),
+// so unlike le03 there is no client-scale arithmetic here at all -- which
+// is also why the cross is sized in LOGICAL units (see below), not in the
+// screen pixels le03 can use directly.
+//
+// v0.7.8: the size.  v0.7.7 copied le03's arm-12 numbers verbatim, which in
+// this logical space is ~80 screen px -- over three times le03's 25 px.  It
+// is now arm 4 / 1 logical px thick = ~27 x 3 screen px, matching le03.
+draw_pcross:
+  pushfd
+  pushad
+  // Zero the mirrors first, exactly as draw_hints does: DBG_PLAYER is only
+  // refreshed while a stage is running, and a stale pair would otherwise
+  // survive into the hint fade test when Hint is off.
+  mov dword ptr [DBG_PX], 0
+  mov dword ptr [DBG_PY], 0
+  cmp dword ptr [OVL_V_PCROSS], 0
+  je ovl_pc_done
+  // ---- the player's playfield position (the same read draw_hints does)
+  mov eax, [DBG_PLAYER]
+  cmp eax, 10000
+  jb ovl_pc_done
+  cmp eax, 7FFF0000
+  ja ovl_pc_done
+  mov eax, [eax]
+  cmp eax, 10000
+  jb ovl_pc_done
+  cmp eax, 7FFF0000
+  ja ovl_pc_done
+  cvttss2si ecx, dword ptr [eax]
+  cvttss2si edx, dword ptr [eax+4]
+  mov [DBG_PX], ecx
+  mov [DBG_PY], edx
+  // ---- playfield + Fix + origin, byte for byte what draw_hints does ----
+  mov eax, [HINT_DX]
+  sub eax, 40
+  add ecx, eax
+  add ecx, [HINT_OX]
+  mov eax, [HINT_DY]
+  sub eax, 40
+  add edx, eax
+  add edx, [HINT_OY]
+  mov [HINT_CX], ecx
+  mov [HINT_CY], edx
+  // ---- horizontal bar ----
+  // arm 4, 1 px thick.  le02's box() works in the game's own 640x480
+  // logical space, which the window then stretches by ~3.33x (2560x1600),
+  // so a logical unit is ~3.3 screen px.  le03's cross is 25 x 3 SCREEN px,
+  // i.e. ~7.5 x 1 logical here -- drawing it at le03's literal numbers
+  // (arm 12) came out ~80 px wide, which is what the user spotted.  box()
+  // is half-open on x1/y1, so a bar spans (x1-x0) x (y1-y0) logical px.
+  mov ecx, [HINT_CX]
+  mov edx, [HINT_CY]
+  mov eax, ecx
+  sub eax, 4
+  mov ebx, ecx
+  add ebx, 4
+  mov esi, edx
+  mov edi, edx
+  inc edi
+  push 1
+  push dword ptr [HINT_COL]
+  push edi
+  push ebx
+  push esi
+  push eax
+  call box
+  add esp, 18
+  // ---- vertical bar ----
+  // box() clobbers ecx/edx/esi, so reload every coordinate from memory.
+  mov ecx, [HINT_CX]
+  mov edx, [HINT_CY]
+  mov esi, ecx
+  mov edi, ecx
+  inc edi
+  mov eax, edx
+  sub eax, 4
+  mov ebx, edx
+  add ebx, 4
+  push 1
+  push dword ptr [HINT_COL]
+  push ebx
+  push edi
+  push eax
+  push esi
+  call box
+  add esp, 18
+ovl_pc_done:
+  popad
+  popfd
+  ret
+
+// ---- hint parsing (v0.6.3) ------------------------------------------ //
+// hint_skip: advance HINT_P past separators, blank lines and comments.
+hint_skip:
+  mov esi, [HINT_P]
+  mov edi, [HINT_END]
+hint_skip_loop:
+  cmp esi, edi
+  jae hint_skip_done
+  mov al, [esi]
+  cmp al, 23
+  je hint_skip_comment
+  cmp al, 20
+  je hint_skip_adv
+  cmp al, 09
+  je hint_skip_adv
+  cmp al, 0D
+  je hint_skip_adv
+  cmp al, 0A
+  je hint_skip_adv
+  cmp al, 2C
+  je hint_skip_adv
+  cmp al, 3A
+  je hint_skip_adv
+  jmp hint_skip_done
+hint_skip_adv:
+  inc esi
+  jmp hint_skip_loop
+hint_skip_comment:
+  inc esi
+  cmp esi, edi
+  jae hint_skip_done
+  cmp byte ptr [esi], 0A
+  jne hint_skip_comment
+  inc esi
+  jmp hint_skip_loop
+hint_skip_done:
+  mov [HINT_P], esi
+  ret
+
+// hint_tok: copy the next token into HINT_TOK (NUL-terminated).
+// Returns its length in eax.
+hint_tok:
+  call hint_skip
+  mov esi, [HINT_P]
+  mov edi, [HINT_END]
+  mov edx, HINT_TOK
+  xor ecx, ecx
+hint_tok_loop:
+  cmp esi, edi
+  jae hint_tok_done
+  mov al, [esi]
+  cmp al, 20
+  je hint_tok_done
+  cmp al, 09
+  je hint_tok_done
+  cmp al, 0D
+  je hint_tok_done
+  cmp al, 0A
+  je hint_tok_done
+  cmp al, 2C
+  je hint_tok_done
+  cmp al, 3A
+  je hint_tok_done
+  cmp al, 23
+  je hint_tok_done
+  cmp ecx, 18
+  jae hint_tok_adv
+  mov [edx], al
+  inc edx
+  inc ecx
+hint_tok_adv:
+  inc esi
+  jmp hint_tok_loop
+hint_tok_done:
+  mov byte ptr [edx], 0
+  mov [HINT_P], esi
+  mov eax, ecx
+  ret
+
+// hint_atoi: decimal HINT_TOK -> eax (0 if it is not a number).
+hint_atoi:
+  mov esi, HINT_TOK
+  xor eax, eax
+hint_atoi_loop:
+  movzx edx, byte ptr [esi]
+  test edx, edx
+  jz hint_atoi_done
+  cmp edx, 30
+  jb hint_atoi_done
+  cmp edx, 39
+  ja hint_atoi_done
+  imul eax, eax, 0A
+  sub edx, 30
+  add eax, edx
+  inc esi
+  jmp hint_atoi_loop
+hint_atoi_done:
+  ret
+
+// hint_time: parse one time spec into HINT_TKIND / HINT_TPAT / HINT_TFR.
+//   "1200"      -> kind 0, frame 1200 (absolute stage frame)
+//   "boss:2:60" -> kind 1, pattern 2, frame 60 (relative to the pattern)
+hint_time:
+  call hint_tok
+  mov dword ptr [HINT_TKIND], 0
+  mov dword ptr [HINT_TPAT], 0
+  mov dword ptr [HINT_TFR], 0
+  mov esi, HINT_TOK
+  movzx eax, byte ptr [esi]
+  or al, 20
+  cmp al, 62
+  jne hint_time_num
+  mov dword ptr [HINT_TKIND], 1
+  call hint_tok
+  call hint_atoi
+  mov [HINT_TPAT], eax
+  call hint_tok
+  call hint_atoi
+  mov [HINT_TFR], eax
+  ret
+hint_time_num:
+  call hint_atoi
+  mov [HINT_TFR], eax
+  ret
+
+// hint_store: copy the HINT_E_* scratch into the array at index HINT_N.
+hint_store:
+  mov eax, [HINT_N]
+  imul eax, eax, 30
+  add eax, HINT_ARR
+  mov ecx, [HINT_E_MARK]
+  mov [eax], ecx
+  mov ecx, [HINT_E_SIZE]
+  mov [eax+4], ecx
+  mov ecx, [HINT_E_CHAR]
+  mov [eax+8], ecx
+  mov ecx, [HINT_E_X]
+  mov [eax+0C], ecx
+  mov ecx, [HINT_E_Y]
+  mov [eax+10], ecx
+  mov ecx, [HINT_E_SK]
+  mov [eax+14], ecx
+  mov ecx, [HINT_E_SP]
+  mov [eax+18], ecx
+  mov ecx, [HINT_E_SF]
+  mov [eax+1C], ecx
+  mov ecx, [HINT_E_EK]
+  mov [eax+20], ecx
+  mov ecx, [HINT_E_EP]
+  mov [eax+24], ecx
+  mov ecx, [HINT_E_EF]
+  mov [eax+28], ecx
+  inc dword ptr [HINT_N]
+  ret
+
+// parse_hints: the main pass.  HINT_WANT holds the stage to keep.
+parse_hints:
+  pushfd
+  pushad
+  // HINT_N / HINT_SKIP are reset once by load_hints, not here: it
+  // calls parse_hints once per file and the counts must accumulate.
+  mov dword ptr [HINT_CURSTAGE], 0
+  mov eax, HINT_BUF
+  mov [HINT_P], eax
+  add eax, [HINT_LEN]
+  mov [HINT_END], eax
+parse_loop:
+  call hint_skip
+  mov eax, [HINT_P]
+  cmp eax, [HINT_END]
+  jae parse_done
+  call hint_tok
+  test eax, eax
+  jz parse_done
+  // A first token that is a bare number, or the word "stage" followed by
+  // one, is a stage header rather than a marker.  (The word form is what
+  // lets a single merged file carry several stages.)
+  cmp eax, 5
+  jne parse_not_stage
+  movzx eax, byte ptr [HINT_TOK]
+  or al, 20
+  cmp al, 73
+  je parse_stage_word
+parse_not_stage:
+  movzx eax, byte ptr [HINT_TOK]
+  cmp eax, 30
+  jb parse_hint
+  cmp eax, 39
+  ja parse_hint
+  call hint_atoi
+  mov [HINT_CURSTAGE], eax
+  jmp parse_loop
+parse_stage_word:
+  call hint_tok
+  call hint_atoi
+  mov [HINT_CURSTAGE], eax
+  jmp parse_loop
+parse_hint:
+  movzx eax, byte ptr [HINT_TOK]
+  mov [HINT_E_MARK], eax
+  call hint_tok
+  call hint_atoi
+  mov [HINT_E_SIZE], eax
+  call hint_tok
+  // Stored as 0 = every character, or 1..4 = that character in the game's
+  // own order.  Anything unrecognised stays 0: failing OPEN is deliberate,
+  // because an unknown name must never silently hide a hint.
+  mov dword ptr [HINT_E_CHAR], 0
+  mov esi, HINT_TOK
+  movzx eax, byte ptr [esi]
+  cmp eax, 31
+  jb parse_char_done
+  cmp eax, 34
+  ja parse_char_done
+  cmp byte ptr [esi+1], 0
+  jne parse_char_done
+  sub eax, 30
+  mov [HINT_E_CHAR], eax
+parse_char_done:
+  call hint_time
+  mov eax, [HINT_TKIND]
+  mov [HINT_E_SK], eax
+  mov eax, [HINT_TPAT]
+  mov [HINT_E_SP], eax
+  mov eax, [HINT_TFR]
+  mov [HINT_E_SF], eax
+  call hint_tok
+  call hint_atoi
+  mov [HINT_E_X], eax
+  call hint_tok
+  call hint_atoi
+  mov [HINT_E_Y], eax
+  call hint_time
+  mov eax, [HINT_TKIND]
+  mov [HINT_E_EK], eax
+  mov eax, [HINT_TPAT]
+  mov [HINT_E_EP], eax
+  mov eax, [HINT_TFR]
+  mov [HINT_E_EF], eax
+  // Keep only entries belonging to the stage we loaded for.
+  mov eax, [HINT_CURSTAGE]
+  cmp eax, [HINT_WANT]
+  jne parse_skip
+  cmp dword ptr [HINT_N], HINT_MAXN
+  jae parse_skip
+  call hint_store
+  jmp parse_loop
+parse_skip:
+  inc dword ptr [HINT_SKIP]
+  jmp parse_loop
+parse_done:
+  popad
+  popfd
+  ret
+
+// ---- capture (v0.6.4) ------------------------------------------------ //
+// hint_itoa: eax = value, edi = destination.  Writes decimal digits and
+// advances edi.  pushad would undo edi, so the new value is stashed.
+hint_itoa:
+  pushad
+  mov ebx, 0A
+  xor ecx, ecx
+  test eax, eax
+  jnz hint_itoa_loop
+  mov byte ptr [edi], 30
+  inc edi
+  jmp hint_itoa_out
+hint_itoa_loop:
+  xor edx, edx
+  div ebx
+  add edx, 30
+  push edx
+  inc ecx
+  test eax, eax
+  jnz hint_itoa_loop
+hint_itoa_pop:
+  pop eax
+  mov [edi], al
+  inc edi
+  dec ecx
+  jnz hint_itoa_pop
+hint_itoa_out:
+  mov [HINT_IEDI], edi
+  popad
+  mov edi, [HINT_IEDI]
+  ret
+
+// hint_emit_time: write one time spec at edi and advance it.
+//   eax = kind (0 = absolute stage frame, 1 = boss pattern)
+//   ecx = pattern index (kind 1 only)
+//   edx = frame
+// kind 0 -> "<frame>"      kind 1 -> "boss:<pattern>:<frame>"
+// hint_itoa preserves ecx/edx (it brackets its work with pushad/popad), so
+// the second call still sees the frame.
+hint_emit_time:
+  test eax, eax
+  jz hint_emit_abs
+  mov byte ptr [edi], 62
+  mov byte ptr [edi+1], 6F
+  mov byte ptr [edi+2], 73
+  mov byte ptr [edi+3], 73
+  mov byte ptr [edi+4], 3A
+  add edi, 5
+  mov eax, ecx
+  call hint_itoa
+  mov byte ptr [edi], 3A
+  inc edi
+  mov eax, edx
+  call hint_itoa
+  ret
+hint_emit_abs:
+  mov eax, edx
+  call hint_itoa
+  ret
+
+// hint_chapter_end: end frame of the chapter containing HINT_C_F.
+// SECTION_TABLE[stage] points at a per-chapter frame-count list (dwords),
+// indexed 0-based -- and HINT_WANT is the REAL 1-based stage (see
+// load_hints), so this is HINT_WANT-1.  Using SEL_STAGE here was wrong in
+// a full run for exactly the same reason it was wrong in load_hints.
+hint_chapter_end:
+  pushad
+  mov eax, [HINT_WANT]
+  test eax, eax
+  jz hint_chap_ok
+  dec eax
+  cmp eax, 6
+  jbe hint_chap_ok
+  xor eax, eax
+hint_chap_ok:
+  mov esi, [SECTION_TABLE+eax*4]
+  movzx ecx, byte ptr [SECTION_CNT+eax]
+  xor edx, edx
+hint_chap_loop:
+  test ecx, ecx
+  jz hint_chap_out
+  mov eax, [esi]
+  add edx, eax
+  cmp edx, [HINT_C_F]
+  jae hint_chap_hit
+  add esi, 4
+  dec ecx
+  jmp hint_chap_loop
+hint_chap_hit:
+  mov [HINT_CHAP_END], edx
+  jmp hint_chap_fin
+hint_chap_out:
+  mov eax, [HINT_C_F]
+  add eax, 12C
+  mov [HINT_CHAP_END], eax
+hint_chap_fin:
+  popad
+  mov eax, [HINT_CHAP_END]
+  ret
+
+// hint_cap_path: HINT_PATHW = <dir>\hint\ + <HINT_WANT>.txt.
+// The first HINT_PRELEN WCHARs are the directory prefix load_hints already
+// worked out (and they are still in the buffer), so only the file name has
+// to be written.  Copying from the start of the same buffer is safe because
+// the destination never overtakes the source.
+hint_cap_path:
+  pushad
+  mov esi, HINT_PATHW
+  mov edi, HINT_PATHW
+  mov ecx, [HINT_PRELEN]
+  test ecx, ecx
+  jz hint_cp_done
+hint_cp_copy:
+  mov ax, [esi]
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  dec ecx
+  jnz hint_cp_copy
+  // One UTF-16 digit for the stage.  Stages are 1..7 and load_hints
+  // already clamps HINT_WANT to 0..9, so one character always suffices.
+  // hint_itoa can NOT be reused here: it writes ANSI BYTES, while this
+  // buffer is UTF-16, and the mismatch shifted every following character
+  // into the high half of the previous code unit -- which is how a
+  // capture produced a file literally named "<dir>7\u7400\u7800\u7400".
+  mov eax, [HINT_WANT]
+  test eax, eax
+  jnz hint_cp_num
+  mov eax, 1
+hint_cp_num:
+  cmp eax, 9
+  jbe hint_cp_digit
+  mov eax, 1
+hint_cp_digit:
+  add eax, 30
+  mov [edi], ax
+  add edi, 2
+  mov word ptr [edi], 2E
+  mov word ptr [edi+2], 74
+  mov word ptr [edi+4], 78
+  mov word ptr [edi+6], 74
+  add edi, 8
+  mov word ptr [edi], 0
+hint_cp_done:
+  popad
+  ret
+
+hint_capture:
+  pushfd
+  pushad
+  mov dword ptr [HINT_CAP_OK], 0
+  // ---- the player's raw playfield position ----
+  mov eax, [DBG_PLAYER]
+  cmp eax, 10000
+  jb hint_capture_done
+  cmp eax, 7FFF0000
+  ja hint_capture_done
+  mov eax, [eax]
+  cmp eax, 10000
+  jb hint_capture_done
+  cmp eax, 7FFF0000
+  ja hint_capture_done
+  cvttss2si ecx, dword ptr [eax]
+  cvttss2si edx, dword ptr [eax+4]
+  mov [HINT_C_X], ecx
+  mov [HINT_C_Y], edx
+  // ---- the current stage frame ----
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb hint_capture_done
+  cmp eax, 7FFF0000
+  ja hint_capture_done
+  mov eax, [eax+4C]
+  mov [HINT_C_F], eax
+  call hint_chapter_end
+  // ---- choose the time form ----
+  // Inside a boss fight an absolute stage frame is useless for authoring a
+  // boss:P:F window: you cannot tell which pattern you are in, and the frame
+  // counter freezes through the dialogue.  So write the form the format
+  // actually wants -- boss:<current pattern>:<frames into it>, ending at
+  // boss:<next pattern>:0, i.e. "until this pattern ends".
+  mov dword ptr [HINT_C_KIND], 0
+  mov dword ptr [HINT_C_PID], 0
+  mov eax, [HINT_C_F]
+  mov [HINT_C_PF], eax
+  mov dword ptr [HINT_C_EKIND], 0
+  mov dword ptr [HINT_C_EPID], 0
+  mov eax, [HINT_CHAP_END]
+  mov [HINT_C_EF], eax
+  cmp dword ptr [HINT_PAT_ON], 0
+  je hint_cap_form_done
+  mov eax, [HINT_PAT_IDX]
+  mov dword ptr [HINT_C_KIND], 1
+  mov [HINT_C_PID], eax
+  mov ecx, [HINT_PAT_FRAME]
+  mov [HINT_C_PF], ecx
+  mov dword ptr [HINT_C_EKIND], 1
+  inc eax
+  mov [HINT_C_EPID], eax
+  mov dword ptr [HINT_C_EF], 0
+hint_cap_form_done:
+  // ---- build: "+ 16 all <start> <x>,<y> <end>" CRLF ----
+  mov edi, HINT_LINE
+  mov byte ptr [edi], 2B
+  mov byte ptr [edi+1], 20
+  add edi, 2
+  mov eax, [HINT_SIZE]
+  call hint_itoa
+  mov byte ptr [edi], 20
+  inc edi
+  mov byte ptr [edi], 61
+  mov byte ptr [edi+1], 6C
+  mov byte ptr [edi+2], 6C
+  mov byte ptr [edi+3], 20
+  add edi, 4
+  mov eax, [HINT_C_KIND]
+  mov ecx, [HINT_C_PID]
+  mov edx, [HINT_C_PF]
+  call hint_emit_time
+  mov byte ptr [edi], 20
+  inc edi
+  mov eax, [HINT_C_X]
+  call hint_itoa
+  mov byte ptr [edi], 2C
+  inc edi
+  mov eax, [HINT_C_Y]
+  call hint_itoa
+  mov byte ptr [edi], 20
+  inc edi
+  mov eax, [HINT_C_EKIND]
+  mov ecx, [HINT_C_EPID]
+  mov edx, [HINT_C_EF]
+  call hint_emit_time
+  mov byte ptr [edi], 0D
+  mov byte ptr [edi+1], 0A
+  add edi, 2
+  mov eax, HINT_LINE
+  sub edi, eax
+  mov [HINT_CAPLEN], edi
+  // ---- aim HINT_PATHW at <stage>.txt before opening ----
+  // load_hints leaves HINT_PATHW pointing at whichever file the directory
+  // walk happened to finish on, so appending straight to it dumped every
+  // capture into that one file -- which is exactly how a stage-7 capture
+  // ended up inside 1.txt.  Rebuild the name from the stage we resolved.
+  call hint_cap_path
+  // ---- open (creating if needed) and append ----
+  push 0
+  push 80
+  push 4
+  push 0
+  push 1
+  // GENERIC_READ | GENERIC_WRITE, not write-only: the tail check below
+  // has to READ the last byte, and a write-only handle makes ReadFile fail
+  // (ERROR_ACCESS_DENIED).  That failure is silent but not harmless -- the
+  // file pointer never advances, so the following write lands ON the last
+  // byte instead of after it.  It cost us a real character: a file ending
+  // "...boss:3:0" came back as "...boss:3:".
+  push C0000000
+  push HINT_PATHW
+  call dword ptr [FILE_IAT]
+  cmp eax, ffffffff
+  je hint_capture_done
+  mov [HINT_HANDLE], eax
+  // A brand new file needs its stage header first.
+  push 0
+  push eax
+  call dword ptr [GETSIZE_IAT]
+  test eax, eax
+  jnz hint_cap_ensure_nl
+  mov edi, HINT_LINE2
+  mov eax, [HINT_WANT]
+  call hint_itoa
+  mov byte ptr [edi], 0D
+  mov byte ptr [edi+1], 0A
+  add edi, 2
+  mov eax, HINT_LINE2
+  sub edi, eax
+  mov [HINT_CAPLEN2], edi
+  push 0
+  push HINT_WROTE
+  push dword ptr [HINT_CAPLEN2]
+  push HINT_LINE2
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [WRITE_IAT]
+  jmp hint_capture_seek
+hint_cap_ensure_nl:
+  // The file already has content.  Make sure it ends with a line break
+  // BEFORE appending.  A file whose last line has no newline would have our
+  // entry glued onto it -- and that is not merely ugly: the tokens that end
+  // up after the merge get parsed as a stage header, so the rest of the
+  // file is misread (a real report: "boss:1:0+ 16 all boss:3:1 ..." made
+  // the parser take 16 for a stage number).
+  mov ecx, eax
+  dec ecx
+  push 0
+  push 0
+  push ecx
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [SEEK_IAT]
+  push 0
+  push HINT_GOT
+  push 1
+  push HINT_LASTCH
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [READ_IAT]
+  cmp byte ptr [HINT_LASTCH], 0A
+  je hint_capture_seek
+  // Terminate the last line first -- but seek to the END explicitly rather
+  // than trusting where the read left us.  If that read ever fails again,
+  // writing at the stale position would overwrite the file's last byte.
+  push 2
+  push 0
+  push 0
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [SEEK_IAT]
+  mov byte ptr [HINT_LASTCH], 0D
+  mov byte ptr [HINT_LASTCH+1], 0A
+  push 0
+  push HINT_WROTE
+  push 2
+  push HINT_LASTCH
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [WRITE_IAT]
+hint_capture_seek:
+  push 2
+  push 0
+  push 0
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [SEEK_IAT]
+  push 0
+  push HINT_WROTE
+  push dword ptr [HINT_CAPLEN]
+  push HINT_LINE
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [WRITE_IAT]
+  mov dword ptr [HINT_CAP_OK], 1
+  push dword ptr [HINT_HANDLE]
+  call dword ptr [CLOSE_IAT]
+hint_capture_done:
+  popad
+  popfd
+  ret
+// ---- cfg_path: CFG_PATHW = "<exe dir>prac.cfg" ------------------
+cfg_path:
+  pushad
+  push 104
+  push CFG_PATHW
+  push 0
+  call dword ptr [MODULE_IAT]      // GetModuleFileNameW
+  test eax, eax
+  jz cfg_path_done
+  mov esi, CFG_PATHW
+  lea edi, [esi+eax*2]
+cfg_path_cut:
+  cmp edi, esi
+  jbe cfg_path_done
+  sub edi, 2
+  cmp word ptr [edi], 5C           // backslash
+  jne cfg_path_cut
+  add edi, 2
+  mov esi, CFG_TAILW
+cfg_path_cp:
+  mov ax, [esi]
+  mov [edi], ax
+  add esi, 2
+  add edi, 2
+  test ax, ax
+  jnz cfg_path_cp
+cfg_path_done:
+  popad
+  ret
+
+// ---- cfg_load: read the file once and apply playerplus -------------
+// A missing file, a short file, or no matching key all leave the build's
+// own default alone, so a fresh install behaves exactly as before.
+cfg_load:
+  pushfd
+  pushad
+  mov dword ptr [CFG_LOADED], 1
+  mov eax, [OVL_V_PCROSS]
+  and eax, 1
+  mov [CFG_LAST], eax
+  call cfg_path
+  push 0
+  push 80                          // FILE_ATTRIBUTE_NORMAL
+  push 3                           // OPEN_EXISTING
+  push 0
+  push 1                           // FILE_SHARE_READ
+  push 80000000                    // GENERIC_READ
+  push CFG_PATHW
+  call dword ptr [FILE_IAT]        // CreateFileW
+  cmp eax, -1
+  je cfg_load_done
+  mov [CFG_H], eax
+  push 0
+  push CFG_RD
+  push 80                          // 128 bytes
+  push CFG_BUF
+  push dword ptr [CFG_H]
+  call dword ptr [READ_IAT]        // ReadFile
+  push dword ptr [CFG_H]
+  call dword ptr [CLOSE_IAT]       // CloseHandle
+  mov eax, [CFG_RD]
+  cmp eax, 80
+  jb cfg_len_ok
+  mov eax, 80
+cfg_len_ok:
+  mov [CFG_LEN], eax
+  mov esi, CFG_BUF
+  mov ecx, eax
+cfg_scan:
+  cmp ecx, 0B                      // the key is 11 bytes
+  jb cfg_load_done
+  push ecx
+  push esi
+  mov edi, CFG_KEY
+  mov edx, 0B
+cfg_cmp:
+  mov al, [esi]
+  or al, 20                        // case-fold; digits and '=' have bit 5
+  cmp al, [edi]
+  jne cfg_cmp_no
+  inc esi
+  inc edi
+  dec edx
+  jnz cfg_cmp
+  pop esi
+  pop ecx
+  movzx eax, byte ptr [esi+0B]
+  sub eax, 30
+  cmp eax, 1
+  jbe cfg_apply
+  xor eax, eax
+cfg_apply:
+  mov [OVL_V_PCROSS], eax
+  mov [CFG_LAST], eax
+  jmp cfg_load_done
+cfg_cmp_no:
+  pop esi
+  pop ecx
+  inc esi
+  dec ecx
+  jmp cfg_scan
+cfg_load_done:
+  popad
+  popfd
+  ret
+
+// ---- cfg_save: rewrite the file with the current value -------------
+cfg_save:
+  pushfd
+  pushad
+  mov eax, [OVL_V_PCROSS]
+  and eax, 1
+  mov [CFG_LAST], eax
+  mov [CFG_VAL], eax
+  call cfg_path
+  push 0
+  push 80
+  push 2                           // CREATE_ALWAYS
+  push 0
+  push 1
+  push 40000000                    // GENERIC_WRITE
+  push CFG_PATHW
+  call dword ptr [FILE_IAT]        // CreateFileW
+  cmp eax, -1
+  je cfg_save_done
+  mov [CFG_H], eax
+  mov esi, CFG_KEY
+  mov edi, CFG_LINE
+  mov ecx, 0B
+cfg_save_cp:
+  mov al, [esi]
+  mov [edi], al
+  inc esi
+  inc edi
+  dec ecx
+  jnz cfg_save_cp
+  mov eax, [CFG_VAL]
+  add eax, 30
+  mov [edi], al
+  inc edi
+  mov byte ptr [edi], 0A
+  inc edi
+  mov eax, CFG_LINE
+  sub edi, eax
+  push 0
+  push CFG_WROTE
+  push edi
+  push CFG_LINE
+  push dword ptr [CFG_H]
+  call dword ptr [WRITE_IAT]       // WriteFile
+  push dword ptr [CFG_H]
+  call dword ptr [CLOSE_IAT]       // CloseHandle
+cfg_save_done:
+  popad
+  popfd
+  ret
+
+// ---- cfg_tick: once per frame, from overlay_logic ------------------
+// Load on the first frame; after that write back only when the value the
+// menu holds stops matching what we last persisted.
+cfg_tick:
+  cmp dword ptr [CFG_LOADED], 0
+  jne cfg_tick_chk
+  call cfg_load
+  ret
+cfg_tick_chk:
+  mov eax, [OVL_V_PCROSS]
+  and eax, 1
+  cmp eax, [CFG_LAST]
+  je cfg_tick_done
+  call cfg_save
+cfg_tick_done:
+  ret
+customMenuRender:
+  pushfd
+  pushad
+  // Start `Bomb:` at the selected character's real default.  Re-applied
+  // whenever the character changes, so it is also correct if the player
+  // backs out and picks somebody else.
+  mov eax, [CHAR_IDX]
+  cmp eax, [LAST_CHAR]
+  je menu_char_done
+  mov [LAST_CHAR], eax
+  cmp eax, 3
+  ja menu_char_done
+  mov eax, [BOMB_DEF+eax*4]
+  mov [SEL_BOMB], eax
+menu_char_done:
+  call getInput
+  mov esi, eax
+  xor ecx, ecx
+menu_keys:
+  mov edx, [esi+ecx*4+84]
+  mov edx, [esi+edx*4+4]
+  mov [KEYS+ecx*4], edx
+  inc ecx
+  cmp ecx, 7
+  jl menu_keys
+  cmp dword ptr [CURR_SEL], 0
+  jne menu_ready
+  mov eax, SEL_STAGE
+  mov [CURR_SEL], eax
+  mov eax, [DIFF]
+  mov [SEL_DIFF], eax
+menu_ready:
+  mov edi, [CURR_SEL]
+  mov esi, edi
+  sub esi, SEL_ARR_BEGIN
+  add esi, SEL_DATA
+  movzx ebx, word ptr [esi]
+  movzx esi, word ptr [esi+2]
+
+  // The Pattern row is the only one whose real upper bound is dynamic:
+  // it is the last pattern of the stage, or the last chapter in Section
+  // mode.  Computing it here feeds both the clamp and the left-wrap.
+  cmp edi, PATTERN_WARP
+  jne menu_max_ok
+  mov eax, [SEL_STAGE]
+  cmp dword ptr [SEL_MODE], 0
+  jne menu_sec_max
+  movzx ebx, byte ptr [MAX_PATTERNID+eax]
+  jmp menu_max_ok
+menu_sec_max:
+  movzx ebx, byte ptr [SECTION_CNT+eax]
+  test ebx, ebx
+  jz menu_max_ffff
+  mov edi, SEL_SECTION
+  dec ebx
+  xor esi, esi
+  jmp menu_max_ok
+menu_max_ffff:
+  mov ebx, ffff
+menu_max_ok:
+  mov [SEL_MAX], ebx
+
+  cmp esi, 0
+  je customMenu_slowInc
+  mov eax, ffffffff
+  jmp customMenu_keyCheck
+customMenu_slowInc:
+  mov eax, 1
+
+customMenu_keyCheck:
+  // Wrap dwell: the value has just landed on an extreme, so give the
+  // player a moment to let go before the held key can move it again.
+  cmp dword ptr [WRAP_LOCK], 0
+  je wrap_no_lock
+  cmp dword ptr [WRAP_TIMER], 0
+  jz wrap_release
+  dec dword ptr [WRAP_TIMER]
+  jmp customMenu_notLeft
+wrap_release:
+  mov dword ptr [WRAP_LOCK], 0
+wrap_no_lock:
+  mov ecx, [KEY_RIGHT]
+  cmp ecx, 0
+  je customMenu_notRight
+  cmp ecx, eax
+  ja customMenu_notRight
+  add [edi], ecx
+  cmp ebx, ffff
+  je customMenu_rightClb
+  cmp [edi], ebx
+  jna customMenu_rightClb // does not exceed max
+  // Over the maximum: wrap to the bottom.  Unbounded rows (max ==
+  // FFFF) never reach here, so they keep their plain clamp.
+  mov dword ptr [edi], 0
+  call wrap_latch
+customMenu_rightClb:
+  call customMenuSwitchClb
+customMenu_notRight:
+  mov ecx, [KEY_LEFT]
+  cmp ecx, 0
+  je customMenu_notLeft
+  cmp ecx, eax
+  ja customMenu_notLeft
+  sub [edi], ecx
+  cmp [edi], 0
+  jnl customMenu_leftClb // not <zero
+  // Under the minimum: bounded rows wrap to the top, unbounded ones
+  // (max == FFFF, i.e. Frame and Score) just clamp at zero.
+  mov eax, [SEL_MAX]
+  cmp eax, ffff
+  je customMenu_leftZero
+  mov [edi], eax
+  call wrap_latch
+  jmp customMenu_leftClb
+customMenu_leftZero:
+  mov [edi], 0
+customMenu_leftClb:
+  call customMenuSwitchClb
+customMenu_notLeft:
+  mov edi, [CURR_SEL]
+  cmp [KEY_UP], 1
+  jne customMenu_notUp
+  sub edi, 4
+  cmp edi, SEL_ARR_BEGIN
+  jnl customMenu_notUp
+  mov edi, SEL_ARR_LAST
+customMenu_notUp:
+  cmp [KEY_DOWN], 1
+  jne customMenu_notDown
+  add edi, 4
+  cmp edi, SEL_ARR_LAST
+  jng customMenu_notDown
+  mov edi, SEL_ARR_BEGIN
+customMenu_notDown:
+
+  mov [CURR_SEL], edi
+  mov edi, 90
+
+  mov eax, [SEL_STAGE]
+  inc eax
+  push eax
+  push TXT_STAGE
+  mov eax, SEL_STAGE
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  mov eax, [SEL_MODE]
+  push [MODE_TXTS+eax*4]
+  push TXT_MODE
+  mov eax, SEL_MODE
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  mov eax, [SEL_DIFF]
+  push [DIFF_TXTS+eax*4]
+  push TXT_DIFF
+  mov eax, SEL_DIFF
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  push [FRAME_COUNT_INIT]
+  push TXT_FRAME
+  mov eax, FRAME_COUNT_INIT
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  cmp dword ptr [SEL_MODE], 0
+  jne draw_section
+  mov eax, [SEL_STAGE]
+  mov ebx, [PATTERNS_TABLE+eax*4]
+  mov eax, [PATTERN_WARP]
+  mov ebx, [ebx+eax*4]
+  push ebx
+  push TXT_PATTERN
+  mov eax, PATTERN_WARP
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+  jmp draw_row_done
+draw_section:
+  mov eax, [SEL_SECTION]
+  inc eax
+  push eax
+  push TXT_SECTION
+  mov eax, PATTERN_WARP
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+draw_row_done:
+
+  push [SEL_POWER]
+  push TXT_POWER
+  mov eax, SEL_POWER
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  push [SEL_FLASHBOMB]
+  push TXT_FLASHBOMB
+  mov eax, SEL_FLASHBOMB
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  push [SEL_RESOURCE]
+  push TXT_RESOURCE
+  mov eax, SEL_RESOURCE
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  push [SEL_LIFE]
+  push TXT_LIFE
+  mov eax, SEL_LIFE
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  push [SEL_BOMB]
+  push TXT_BOMB
+  mov eax, SEL_BOMB
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 14
+  add edi, 10
+
+  mov eax, [SEL_SCORE]
+  cdq
+  mov ebx, 3E8 // 1000
+  div ebx
+  push edx
+  push eax
+  push TXT_SCORE
+  mov eax, SEL_SCORE
+  call getColor
+  push eax
+  push ff
+  push ff
+  call getTextTexture
+  add esp, 0c
+  push eax
+  push edi
+  push 30
+  call drawTextTexture
+  add esp, 18
+  add edi, 10
+
+
+  mov eax, [SEL_DIFF]
+  mov [DIFF], eax
+  popad
+  popfd
+  mov eax, [SEL_STAGE]
+  mov [ebx+638], eax
+  mov dword ptr [IS_PRAC], 1
+
+  jmp customMenuRender_ret
+
+beginPracticeStage:
+
+  pushfd
+  pushad
+  call preparePracticeState
+  popad
+  popfd
+  mov edi, ecx
+  xorps xmm0, xmm0
+  jmp beginPracticeStage_ret
+
+initFrameTimer:
+
+  pushfd
+  push eax
+  mov [DBG_STAGE], edi
+  // load_hints already calls parse_hints once per file it enumerates,
+  // so there must NOT be a parse_hints call here as well: it would
+  // re-parse whatever text is still sitting in HINT_BUF (the last file
+  // read) and double-count that file's entries.
+  call load_hints
+  // v0.7.5 -- the Hit counter is per ATTEMPT, not per process.  It used
+  // to accumulate from launch forever, so a retry (or starting a new
+  // stage in a full run) inherited the previous attempt's total.  This
+  // hook is the one point guaranteed to run at every stage start, so
+  // zero it here.  (NOSORE_DEBT is the storage; the F12 row mirrors it
+  // into OVL_V_DEBT every frame, so the row follows automatically.)
+  mov dword ptr [NOSORE_DEBT], 0
+  mov dword ptr [edi+4C], 0
+  mov dword ptr [MUSIC_PLAYED], 0
+  mov dword ptr [MUSIC_KIND], 0
+  cmp dword ptr [IS_PRAC], 1
+  jne frame_done
+  mov eax, [FRAME_COUNT_INIT]
+  mov [edi+4C], eax
+frame_done:
+  pop eax
+  popfd
+  jmp initFrameTimer_ret
+
+applyPatternIdWarp:
+
+  pushfd
+  push ebx
+  cmp dword ptr [IS_PRAC], 1
+  jne boss_done
+  mov ebx, [SELECTED_ID]
+  cmp ebx, 0
+  jl boss_done
+  mov [eax+44], ebx
+boss_done:
+  pop ebx
+  popfd
+  mov [edi], eax
+  call game+2BE85F
+  jmp applyPatternIdWarp_ret
+
+setPracFalse:
+  mov dword ptr [IS_PRAC], 0
+  call game+E24B0
+  jmp setPracFalse_ret
+
+setPower:
+  pushfd
+  push eax
+  push edx
+  cmp dword ptr [IS_PRAC], 1
+  jne power_done
+  mov eax, [edi]
+  mov eax, [eax]
+  mov edx, [SEL_POWER]
+  mov [eax+7C], edx
+  mov edx, [SEL_FLASHBOMB]
+  mov [eax+6C], edx
+  mov edx, [SEL_RESOURCE]
+  mov [eax+8C], edx
+  mov edx, [SEL_LIFE]
+  mov [eax+48], edx
+  mov edx, [SEL_BOMB]
+  mov [eax+60], edx
+power_done:
+  pop edx
+  pop eax
+  popfd
+  mov dword ptr [edi+2824], 0
+  jmp setPower_ret
+
+setScore:
+
+  pushfd
+  push ebx
+  mov dword ptr [eax+58], 0
+  cmp dword ptr [IS_PRAC], 1
+  jne score_done
+  mov ebx, [SEL_SCORE]
+  imul ebx, ebx, 3E8
+  mov [eax+58], ebx
+score_done:
+  pop ebx
+  popfd
+  jmp setScore_ret
+
+musicFix1:
+  mov eax, [esi+4C]
+  cmp dword ptr [IS_PRAC], 1
+  jne music_original
+  cmp dword ptr [MUSIC_PLAYED], 0
+  je music_first
+  cmp dword ptr [MUSIC_PLAYED], 1
+  jne music_original
+  push edx
+  mov edx, [SEL_STAGE]
+  mov edx, [BOSS_FRAMES+edx*4]
+  cmp [FRAME_COUNT_INIT], edx
+  pop edx
+  jl music_original
+  mov dword ptr [MUSIC_PLAYED], 2
+  mov dword ptr [MUSIC_KIND], 1
+  call selectBossMusicKind
+  cmp eax, eax
+  jmp musicFix1_ret
+music_first:
+  call prepareAlphaMusic
+  cmp eax, [esi+68]
+  jl music_original
+  mov dword ptr [MUSIC_PLAYED], 1
+  mov dword ptr [MUSIC_KIND], 0
+  cmp eax, eax
+  jmp musicFix1_ret
+music_original:
+  cmp eax, [esi+68]
+  jmp musicFix1_ret
+
+musicFix2:
+
+  cmp dword ptr [IS_PRAC], 1
+  jne music_normal_kind
+  push dword ptr [MUSIC_KIND]
+  jmp music_push_stage
+music_normal_kind:
+  push 0
+music_push_stage:
+  push dword ptr [esi+30]
+  jmp musicFix2_ret
+
+selectBossMusicKind:
+  ret
+prepareAlphaMusic:
+  ret
+
+// The game has two player-init paths and we do not know which one runs
+// last, so write Life/Bomb in both -- setPower above, and these two.
+life_stub:
+  cmp dword ptr [IS_PRAC], 1
+  jne life_stub_orig
+  push edx
+  mov edx, [SEL_LIFE]
+  mov [eax+48], edx
+  pop edx
+  jmp life_stub_ret
+life_stub_orig:
+  mov dword ptr [eax+48], 9
+  jmp life_stub_ret
+bomb_stub:
+  cmp dword ptr [IS_PRAC], 1
+  jne bomb_stub_orig
+  mov eax, [SEL_BOMB]
+  jmp bomb_stub_ret
+bomb_stub_orig:
+  mov eax, [ebx+eax*4+A8]
+  jmp bomb_stub_ret
+wrap_latch:
+  // esi still holds this row's SEL_DATA fast flag.  Only the
+  // hold-to-scroll rows need the dwell; a slow row already needs a fresh
+  // key press for every single step, so it cannot run away on its own.
+  cmp esi, 0
+  je wrap_latch_ret
+  mov dword ptr [WRAP_LOCK], 1
+  mov dword ptr [WRAP_TIMER], 12 // 18 frames, about 0.3 s
+wrap_latch_ret:
+  ret
+getBossExtraFlag:
+  // ecx and edx are live at every bossBombGate site, so preserve them.
+  push ecx
+  push edx
+  mov al, [ebx+A1]
+  cmp dword ptr [IS_PRAC], 1
+  jne boss_extra_return
+  // Ground truth: what the practice menu is set to right now.
+  // Stage index 6 is the Extra stage; 5/6 are Extra / AbsurdlyExtra.
+  mov ecx, [SEL_STAGE]
+  cmp ecx, 6
+  jne boss_extra_scene
+  mov ecx, [SEL_DIFF]
+  cmp ecx, 5
+  jl boss_extra_scene
+  cmp ecx, 6
+  jg boss_extra_scene
+  mov al, 1
+  jmp boss_extra_return
+boss_extra_scene:
+  // BAN's boss-object snapshot test, kept as a second opinion.
+  cmp dword ptr [ebx+30], 7
+  jl boss_extra_return
+  cmp dword ptr [ebx+30], 7
+  jg boss_extra_return
+  cmp dword ptr [ebx+34], 5
+  jl boss_extra_return
+  cmp dword ptr [ebx+34], 6
+  jg boss_extra_return
+  mov al, 1
+boss_extra_return:
+  pop edx
+  pop ecx
+  ret
+
+bossBombGate0:
+
+  push eax
+  call getBossExtraFlag
+  cmp al, 1
+  pop eax
+  jmp bossBombGate0_ret
+
+bossBombGate1:
+
+  push eax
+  call getBossExtraFlag
+  cmp al, 1
+  pop eax
+  jmp bossBombGate1_ret
+
+bossBombGate2:
+
+  push eax
+  call getBossExtraFlag
+  cmp al, 1
+  pop eax
+  jmp bossBombGate2_ret
+
+bossBombGate3:
+
+  push eax
+  call getBossExtraFlag
+  cmp al, 1
+  pop eax
+  jmp bossBombGate3_ret
+
+bossBombGate4:
+
+  push eax
+  call getBossExtraFlag
+  cmp al, 0
+  pop eax
+  jmp bossBombGate4_ret
+
+getPhase:
+  xor eax, eax
+  cmp dword ptr [IS_PRAC], 1
+  jne phase_return
+  mov eax, [SELECTED_PHASE]
+phase_return:
+  ret
+
+tasStart:
+
+  pushfd
+  push eax
+  call getPhase
+  mov eax, [TAS_START+eax*4]
+  mov [game+5E0888], eax
+  pop eax
+  popfd
+  jmp tasStart_ret
+
+tasLength:
+
+  push eax
+  call getPhase
+  cmp esi, [TAS_LENGTH+eax*4]
+  pop eax
+  jmp tasLength_ret
+
+tasTimer:
+
+  pushfd
+  push eax
+  call getPhase
+  mov eax, [TAS_TIMER+eax*4]
+  mov [ebx+924], eax
+  pop eax
+  popfd
+  jmp tasTimer_ret
+
+customMenuSwitchClb:
+  mov eax, [CURR_SEL]
+  cmp eax, SEL_STAGE
+  jne callback_pattern
+  mov dword ptr [FRAME_COUNT_INIT], 0
+  mov dword ptr [PATTERN_WARP], 0
+  mov dword ptr [SEL_SECTION], 0
+callback_pattern:
+  mov eax, [SEL_STAGE]
+  cmp dword ptr [SEL_MODE], 0
+  jne callback_section
+  movzx ebx, byte ptr [MAX_PATTERNID+eax]
+  cmp [PATTERN_WARP], ebx
+  jle callback_in_range
+  mov [PATTERN_WARP], ebx
+callback_in_range:
+  mov ecx, [PATTERN_WARP]
+  mov ebx, [IDS_TABLE+eax*4]
+  mov edx, [ebx+ecx*4]
+  mov [SELECTED_ID], edx
+  mov ebx, [PHASES_TABLE+eax*4]
+  mov ebx, [ebx+ecx*4]
+  mov [SELECTED_PHASE], ebx
+  // Boss mode: the frame is part of the pattern, and a frame that does
+  // not match the pattern desyncs the boss and can crash the game, so
+  // re-derive it on every change -- that makes the Frame row read-only.
+  cmp edx, 0
+  jl callback_none
+  movzx ebx, byte ptr [MBOSS_PATTERN_CNT+eax]
+  cmp edx, ebx
+  jge callback_boss
+  mov eax, [MBOSS_FRAMES+eax*4]
+  jmp callback_frame
+callback_boss:
+  mov eax, [BOSS_FRAMES+eax*4]
+callback_frame:
+  mov [FRAME_COUNT_INIT], eax
+  jmp callback_done
+callback_none:
+  mov dword ptr [FRAME_COUNT_INIT], 0
+  jmp callback_done
+callback_section:
+  // Section mode: the frame is the user's to nudge; only re-derive it
+  // when something other than the Frame row changed.
+  cmp dword ptr [CURR_SEL], FRAME_COUNT_INIT
+  je callback_done
+  mov dword ptr [PATTERN_WARP], 0
+  mov dword ptr [SELECTED_ID], ffffffff
+  mov dword ptr [SELECTED_PHASE], 0
+  movzx ebx, byte ptr [SECTION_CNT+eax]
+  test ebx, ebx
+  jz callback_sec_none
+  dec ebx
+  cmp [SEL_SECTION], ebx
+  jle callback_sec_ok
+  mov [SEL_SECTION], ebx
+callback_sec_ok:
+  mov ecx, [SEL_SECTION]
+  mov ebx, [SECTION_TABLE+eax*4]
+  mov ebx, [ebx+ecx*4]
+  mov [FRAME_COUNT_INIT], ebx
+  jmp callback_done
+callback_sec_none:
+  mov dword ptr [SEL_SECTION], 0
+  mov dword ptr [FRAME_COUNT_INIT], 0
+callback_done:
+  ret
+getColor:
+  cmp [CURR_SEL], eax
+  je color_selected
+  mov eax, FF
+  ret
+color_selected:
+  xor eax, eax
+  ret
+
+preparePracticeState:
+  mov dword ptr [RECORD_VALID], 0
+  cmp byte ptr [game+ADDFFC], 0
+  jne practice_state_inactive
+  cmp byte ptr [game+ADDFFA], 0
+  jne practice_state_replay
+  cmp byte ptr [game+ADDFF9], 1
+  jne practice_state_inactive
+  cmp dword ptr [IS_PRAC], 1
+  jne practice_state_inactive
+  mov eax, [SEL_STAGE]
+  mov [RECORD_CONFIG+10], eax
+  mov eax, [SEL_DIFF]
+  mov [RECORD_CONFIG+14], eax
+  mov eax, [FRAME_COUNT_INIT]
+  mov [RECORD_CONFIG+18], eax
+  mov eax, [PATTERN_WARP]
+  mov [RECORD_CONFIG+1C], eax
+  mov eax, [SEL_POWER]
+  mov [RECORD_CONFIG+20], eax
+  xor eax, eax
+  mov [RECORD_CONFIG+24], eax
+  mov eax, [SEL_FLASHBOMB]
+  mov [RECORD_CONFIG+28], eax
+  mov eax, [SEL_RESOURCE]
+  mov [RECORD_CONFIG+2C], eax
+  mov eax, [SEL_SCORE]
+  mov [RECORD_CONFIG+30], eax
+  mov eax, [SELECTED_ID]
+  mov [RECORD_CONFIG+34], eax
+  mov eax, [SELECTED_PHASE]
+  mov [RECORD_CONFIG+38], eax
+  mov dword ptr [RECORD_CONFIG], 5250454C
+  mov dword ptr [RECORD_CONFIG+4], 50524341
+  mov dword ptr [RECORD_CONFIG+8], 1
+  mov dword ptr [RECORD_CONFIG+C], 2
+  mov esi, RECORD_CONFIG
+  xor eax, eax
+  mov ecx, F
+practice_checksum:
+  xor eax, [esi]
+  add esi, 4
+  loop practice_checksum
+  mov [RECORD_CONFIG+3C], eax
+  mov dword ptr [RECORD_VALID], 1
+  ret
+practice_state_replay:
+  cmp dword ptr [REPLAY_VALID], 1
+  jne practice_state_inactive
+  mov eax, [REPLAY_CONFIG+10]
+  mov [SEL_STAGE], eax
+  mov eax, [REPLAY_CONFIG+14]
+  mov [SEL_DIFF], eax
+  mov eax, [REPLAY_CONFIG+18]
+  mov [FRAME_COUNT_INIT], eax
+  mov eax, [REPLAY_CONFIG+1C]
+  mov [PATTERN_WARP], eax
+  mov eax, [REPLAY_CONFIG+20]
+  mov [SEL_POWER], eax
+  mov eax, [REPLAY_CONFIG+28]
+  mov [SEL_FLASHBOMB], eax
+  mov eax, [REPLAY_CONFIG+2C]
+  mov [SEL_RESOURCE], eax
+  mov eax, [REPLAY_CONFIG+30]
+  mov [SEL_SCORE], eax
+  mov eax, [REPLAY_CONFIG+34]
+  mov [SELECTED_ID], eax
+  mov eax, [REPLAY_CONFIG+38]
+  mov [SELECTED_PHASE], eax
+  mov eax, [SEL_STAGE]
+  inc eax
+  mov [game+ADDFF0], eax
+  mov eax, [SEL_DIFF]
+  mov [DIFF], eax
+  mov dword ptr [IS_PRAC], 1
+  ret
+practice_state_inactive:
+  mov dword ptr [IS_PRAC], 0
+  ret
+validateReplayConfig:
+  cmp dword ptr [REPLAY_CONFIG], 5250454C
+  jne replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+4], 50524341
+  jne replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+8], 1
+  jne replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+C], 2
+  jne replay_config_bad
+  mov esi, REPLAY_CONFIG
+  xor eax, eax
+  mov ecx, 10
+replay_checksum:
+  xor eax, [esi]
+  add esi, 4
+  loop replay_checksum
+  test eax, eax
+  jne replay_config_bad
+  mov eax, [REPLAY_CONFIG+10]
+  cmp eax, 6
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+14], 6
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+18], FFFF
+  ja replay_config_bad
+  mov ecx, [REPLAY_CONFIG+1C]
+  movzx edx, byte ptr [MAX_PATTERNID+eax]
+  cmp ecx, edx
+  ja replay_config_bad
+  mov edx, [IDS_TABLE+eax*4]
+  mov edx, [edx+ecx*4]
+  cmp edx, [REPLAY_CONFIG+34]
+  jne replay_config_bad
+  mov edx, [PHASES_TABLE+eax*4]
+  mov edx, [edx+ecx*4]
+  cmp edx, [REPLAY_CONFIG+38]
+  jne replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+20], 1F4
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+24], 0
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+28], 1770
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+2C], 1388
+  ja replay_config_bad
+  cmp dword ptr [REPLAY_CONFIG+30], FFFF
+  ja replay_config_bad
+  mov eax, 1
+  ret
+replay_config_bad:
+  xor eax, eax
+  ret
+
+replayLoadBegin:
+
+  mov dword ptr [REPLAY_VALID], 0
+  mov dword ptr [esi+8], 0
+  jmp replayLoadBegin_ret
+
+replayLoadSettings:
+
+  call game+2BDEAD
+  pushfd
+  pushad
+  cmp dword ptr [ebp-8C], 0
+  je replay_load_body_complete
+  cmp eax, 1
+  jne replay_load_done
+replay_load_body_complete:
+  cmp byte ptr [esi+74], 1
+  jne replay_load_done
+  push dword ptr [ebp-88]
+  push 1
+  push 40
+  push REPLAY_CONFIG
+  call game+2BDEAD
+  add esp, 10
+  cmp eax, 1
+  jne replay_load_done
+  call validateReplayConfig
+  mov [REPLAY_VALID], eax
+replay_load_done:
+  popad
+  popfd
+  jmp replayLoadSettings_ret
+
+replaySaveSettings:
+
+  call game+2BEB6F
+  pushfd
+  pushad
+  cmp dword ptr [ebp-8C], 0
+  je replay_save_body_complete
+  cmp eax, 1
+  jne replay_save_done
+replay_save_body_complete:
+  cmp dword ptr [RECORD_VALID], 1
+  jne replay_save_done
+  cmp byte ptr [esi+74], 1
+  jne replay_save_done
+  push dword ptr [ebp-88]
+  push 1
+  push 40
+  push RECORD_CONFIG
+  call game+2BEB6F
+  add esp, 10
+replay_save_done:
+  popad
+  popfd
+  jmp replaySaveSettings_ret
+MBOSS_FRAMES:
+  dd A27 1323 BB7 1387 1323 6A3 1387
+BOSS_FRAMES:
+  dd F9F 1837 1A2B 2327 27D7 1193 2903
+MAX_PATTERNID:
+ db 6 8 A 8 A 12 15
+MBOSS_PATTERN_CNT:
+ db 2 1 2 2 2 2 3
+PATTERNS_TABLE:
+ dd names_0
+ dd names_1
+ dd names_2
+ dd names_3
+ dd names_4
+ dd names_5
+ dd names_6
+IDS_TABLE:
+ dd ids_0
+ dd ids_1
+ dd ids_2
+ dd ids_3
+ dd ids_4
+ dd ids_5
+ dd ids_6
+PHASES_TABLE:
+ dd phases_0
+ dd phases_1
+ dd phases_2
+ dd phases_3
+ dd phases_4
+ dd phases_5
+ dd phases_6
+names_0:
+ dd name_0_0
+ dd name_0_1
+ dd name_0_2
+ dd name_0_3
+ dd name_0_4
+ dd name_0_5
+ dd name_0_6
+ids_0:
+  dd FFFFFFFF 0 1 2 3 4 5
+phases_0:
+  dd 0 0 0 0 0 0 0
+name_0_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_0_1:
+  db 4d 00 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_0_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_0_3:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_0_4:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_0_5:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_0_6:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+names_1:
+ dd name_1_0
+ dd name_1_1
+ dd name_1_2
+ dd name_1_3
+ dd name_1_4
+ dd name_1_5
+ dd name_1_6
+ dd name_1_7
+ dd name_1_8
+ids_1:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7
+phases_1:
+  dd 0 0 0 0 0 0 0 0 0
+name_1_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_1_1:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_1_2:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_1_3:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_1_4:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_1_5:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_1_6:
+  db 4e 00 6f 00 6e 00 20 00 33 00 00 00
+name_1_7:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_1_8:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+names_2:
+ dd name_2_0
+ dd name_2_1
+ dd name_2_2
+ dd name_2_3
+ dd name_2_4
+ dd name_2_5
+ dd name_2_6
+ dd name_2_7
+ dd name_2_8
+ dd name_2_9
+ dd name_2_10
+ids_2:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7 8 9
+phases_2:
+  dd 0 0 0 0 0 0 0 0 0 0 0
+name_2_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_2_1:
+  db 4d 00 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_2_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_2_3:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_2_4:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_2_5:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_2_6:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_2_7:
+  db 4e 00 6f 00 6e 00 20 00 33 00 00 00
+name_2_8:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_2_9:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+name_2_10:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 35 00 00 00
+names_3:
+ dd name_3_0
+ dd name_3_1
+ dd name_3_2
+ dd name_3_3
+ dd name_3_4
+ dd name_3_5
+ dd name_3_6
+ dd name_3_7
+ dd name_3_8
+ids_3:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7
+phases_3:
+  dd 0 0 0 0 0 0 0 0 0
+name_3_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_3_1:
+  db 4d 00 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_3_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_3_3:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_3_4:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_3_5:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_3_6:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_3_7:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_3_8:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+names_4:
+ dd name_4_0
+ dd name_4_1
+ dd name_4_2
+ dd name_4_3
+ dd name_4_4
+ dd name_4_5
+ dd name_4_6
+ dd name_4_7
+ dd name_4_8
+ dd name_4_9
+ dd name_4_10
+ids_4:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7 8 9
+phases_4:
+  dd 0 0 0 0 0 0 0 0 0 0 0
+name_4_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_4_1:
+  db 4d 00 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_4_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_4_3:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_4_4:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_4_5:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_4_6:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_4_7:
+  db 4e 00 6f 00 6e 00 20 00 33 00 00 00
+name_4_8:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_4_9:
+  db 4e 00 6f 00 6e 00 20 00 34 00 00 00
+name_4_10:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+names_5:
+ dd name_5_0
+ dd name_5_1
+ dd name_5_2
+ dd name_5_3
+ dd name_5_4
+ dd name_5_5
+ dd name_5_6
+ dd name_5_7
+ dd name_5_8
+ dd name_5_9
+ dd name_5_10
+ dd name_5_11
+ dd name_5_12
+ dd name_5_13
+ dd name_5_14
+ dd name_5_15
+ dd name_5_16
+ dd name_5_17
+ dd name_5_18
+ids_5:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7 8 9 A B C C C C C C
+phases_5:
+  dd 0 0 0 0 0 0 0 0 0 0 0 0 0 1 2 3 4 5 6
+name_5_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_5_1:
+  db 4d 00 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_5_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_5_3:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_5_4:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_5_5:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_5_6:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_5_7:
+  db 4e 00 6f 00 6e 00 20 00 33 00 00 00
+name_5_8:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_5_9:
+  db 4e 00 6f 00 6e 00 20 00 34 00 00 00
+name_5_10:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+name_5_11:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 35 00 00 00
+name_5_12:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 36 00 00 00
+name_5_13:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 31 00 00 00
+name_5_14:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 32 00 00 00
+name_5_15:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 33 00 00 00
+name_5_16:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 34 00 00 00
+name_5_17:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 35 00 00 00
+name_5_18:
+  db 54 00 61 00 73 00 6f 00 75 00 6b 00 65 00 6e 00 20 00 50 00 36 00 00 00
+names_6:
+ dd name_6_0
+ dd name_6_1
+ dd name_6_2
+ dd name_6_3
+ dd name_6_4
+ dd name_6_5
+ dd name_6_6
+ dd name_6_7
+ dd name_6_8
+ dd name_6_9
+ dd name_6_10
+ dd name_6_11
+ dd name_6_12
+ dd name_6_13
+ dd name_6_14
+ dd name_6_15
+ dd name_6_16
+ dd name_6_17
+ dd name_6_18
+ dd name_6_19
+ dd name_6_20
+ dd name_6_21
+ids_6:
+  dd FFFFFFFF 0 1 2 3 4 5 6 7 8 9 A B C D E F 10 11 12 13 14
+phases_6:
+  dd 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+name_6_0:
+  db 4e 00 6f 00 6e 00 65 00 00 00
+name_6_1:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_6_2:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_6_3:
+  db 4d 00 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_6_4:
+  db 4e 00 6f 00 6e 00 20 00 31 00 00 00
+name_6_5:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 00 00
+name_6_6:
+  db 4e 00 6f 00 6e 00 20 00 32 00 00 00
+name_6_7:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 32 00 00 00
+name_6_8:
+  db 4e 00 6f 00 6e 00 20 00 33 00 00 00
+name_6_9:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 33 00 00 00
+name_6_10:
+  db 4e 00 6f 00 6e 00 20 00 34 00 00 00
+name_6_11:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 34 00 00 00
+name_6_12:
+  db 4e 00 6f 00 6e 00 20 00 35 00 00 00
+name_6_13:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 35 00 00 00
+name_6_14:
+  db 4e 00 6f 00 6e 00 20 00 36 00 00 00
+name_6_15:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 36 00 00 00
+name_6_16:
+  db 4e 00 6f 00 6e 00 20 00 37 00 00 00
+name_6_17:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 37 00 00 00
+name_6_18:
+  db 4e 00 6f 00 6e 00 20 00 38 00 00 00
+name_6_19:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 38 00 00 00
+name_6_20:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 39 00 00 00
+name_6_21:
+  db 53 00 70 00 65 00 6c 00 6c 00 20 00 31 00 30 00 00 00
+SEL_DATA:
+ dw 6 0
+ dw 1 0
+ dw 6 0
+ dw FFFF 1
+ dw FFFF 0
+ dw 1F4 1
+ dw 1770 1
+ dw 1388 1
+ dw 9 0
+ dw 9 0
+ dw FFFF 1
+SEL_ARR_BEGIN:
+SEL_STAGE:
+  dd 0
+SEL_MODE:
+  dd 0
+SEL_DIFF:
+  dd 0
+FRAME_COUNT_INIT:
+  dd 0
+PATTERN_WARP:
+  dd 0
+SEL_POWER:
+  dd 1F4
+SEL_FLASHBOMB:
+  dd 0
+SEL_RESOURCE:
+  dd 0
+SEL_LIFE:
+  dd 9
+SEL_BOMB:
+  dd 4
+SEL_ARR_LAST:
+SEL_SCORE:
+  dd 0
+SEL_SECTION:
+  dd 0
+CURR_SEL:
+  dd 0
+SEL_MAX:
+  dd 0
+IS_PRAC:
+  dd 0
+MUSIC_PLAYED:
+  dd 0
+MUSIC_KIND:
+  dd 0
+SELECTED_ID:
+  dd FFFFFFFF
+SELECTED_PHASE:
+  dd 0
+KEYS:
+  dd 0 0 0 0 0 0 0
+RECORD_VALID:
+  dd 0
+REPLAY_VALID:
+  dd 0
+RECORD_CONFIG:
+  dd 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+REPLAY_CONFIG:
+  dd 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+DIFF_TXTS:
+ dd diff_0
+ dd diff_1
+ dd diff_2
+ dd diff_3
+ dd diff_4
+ dd diff_5
+ dd diff_6
+diff_0:
+  db 45 00 61 00 73 00 79 00 00 00
+diff_1:
+  db 4e 00 6f 00 72 00 6d 00 61 00 6c 00 00 00
+diff_2:
+  db 48 00 61 00 72 00 64 00 00 00
+diff_3:
+  db 55 00 6e 00 72 00 65 00 61 00 6c 00 00 00
+diff_4:
+  db 45 00 61 00 73 00 79 00 45 00 78 00 74 00 72 00 61 00 00 00
+diff_5:
+  db 45 00 78 00 74 00 72 00 61 00 00 00
+diff_6:
+  db 41 00 62 00 73 00 75 00 72 00 64 00 6c 00 79 00 45 00 78 00 74 00 72 00 61 00 00 00
+TXT_STAGE:
+  db 53 00 74 00 61 00 67 00 65 00 3a 00 20 00 25 00 64 00 00 00
+TXT_DIFF:
+  db 44 00 69 00 66 00 66 00 3a 00 20 00 25 00 73 00 00 00
+TXT_FRAME:
+  db 46 00 72 00 61 00 6d 00 65 00 20 00 77 00 61 00 72 00 70 00 3a 00 20 00 25 00 64 00 00 00
+TXT_PATTERN:
+  db 50 00 61 00 74 00 74 00 65 00 72 00 6e 00 3a 00 20 00 25 00 73 00 00 00
+TXT_POWER:
+  db 50 00 6f 00 77 00 65 00 72 00 3a 00 20 00 25 00 64 00 00 00
+TXT_POWER2:
+  db 50 00 6f 00 77 00 65 00 72 00 20 00 32 00 3a 00 20 00 25 00 64 00 00 00
+TXT_FLASHBOMB:
+  db 46 00 6c 00 61 00 73 00 68 00 62 00 6f 00 6d 00 62 00 3a 00 20 00 25 00 64 00 00 00
+TXT_RESOURCE:
+  db 50 00 65 00 74 00 61 00 6c 00 73 00 3a 00 20 00 25 00 64 00 00 00
+TXT_SCORE:
+  db 53 00 63 00 6f 00 72 00 65 00 3a 00 20 00 25 00 30 00 33 00 64 00 20 00 25 00 30 00 33 00 64 00 20 00 30 00 30 00 30 00 00 00
+TAS_START:
+  dd 1 1 4 2 5 0 7
+TAS_LENGTH:
+  dd B7C B7C 654 960 690 99C B7C
+TAS_TIMER:
+  dd 2F94 2F94 2F94 2F94 2F94 2F94 438
+// ---- F12 overlay (v0.4.0) state ----
+OVERLAY_OPEN:
+  dd 0
+OVL_DRAWN:
+  dd 0
+OVL_CUR:
+  dd 0
+OVL_ROWS_N:
+  dd C
+OVL_PREV_F12:
+  db 0
+// One byte per key whose rising edge we care about: UP, DOWN, LEFT, RIGHT,
+// then Z (5A), ESC (1B), BACK (08).  Cleared with two dword stores.
+OVL_PREV_KEYS:
+  db 0 0 0 0 0 0 0 0
+OVL_VKBUF:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+
+// ---- Seed row digit entry (v0.5.1) ---------------------------------
+// OVL_TYPE_LAST is the VK of the digit currently held, which gives rising
+// edge detection for all ten digits with a single word.
+OVL_TYPE_ON:
+  dd 0
+OVL_TYPE_OLD:
+  dd 0            // value to restore if you press ESC
+OVL_TYPE_FRESH:
+  dd 0            // 1 -> the next digit replaces instead of appending
+OVL_TYPE_LAST:
+  dd 0
+// Which row is in typing mode, so its label can be restored without
+// hard-coding a row index (see ovl_type_toggle).
+OVL_TYPE_ROW:
+  dd 0
+OVL_PREV_SEEDSW:
+  dd 0            // previous SEED_ON, for the grab-on-rising-edge
+// Row-draw cursor.  Kept in memory because the game's text helpers do not
+// preserve registers across calls (see the row loop).
+OVL_RCUR:
+  dd 0
+OVL_RPTR:
+  dd 0
+OVL_RY:
+  dd 0
+// The label the row loop decided to draw this iteration (its own format, or
+// an on/off string from OVL_ALT).  Both the shadow and the real pass use it,
+// so it is computed once per row.
+OVL_RTXT:
+  dd 0
+
+// ---- held-key fine adjustment (v0.4.1) -----------------------------
+// Holding LEFT/RIGHT first repeats the row's own step, and after
+// OVL_HOLD_DELAY frames it switches to +-1 every OVL_NUDGE_EVERY frames.
+// Without this a 0..500 row (Power) or a 0..65535 row (Seed) cannot be
+// set to a chosen value.
+OVL_HOLD_DIR:
+  dd 0            // 0 = neither, 1 = RIGHT, 2 = LEFT
+OVL_HOLD_N:
+  dd 0            // frames the current direction has been held
+OVL_NUDGE_N:
+  dd 0            // frames since the last +-1
+OVL_HOLD_DELAY:
+  dd 14           // 0x14 = 20 frames ~ 0.33 s before the fine step starts
+OVL_NUDGE_EVERY:
+  dd 3            // then one +-1 every 3 frames ~ 20/s
+
+// ---- seed lock (v0.5.0) -------------------------------------------
+// SEED_ON = 0 -> the hook forwards the game's own time-based seed, i.e.
+//                the behaviour is identical to vanilla.
+// SEED_ON = 1 -> the seed is forced to SEL_SEED.
+SEED_ON:
+  dd 0
+SEL_SEED:
+  dd 0
+// What was actually used, and a fingerprint of the MT state right after
+// seeding.  Same seed => same fingerprint, which is the whole proof.
+SEED_USED:
+  dd 0
+SEED_FP:
+  dd 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+
+// row = text, value pointer, min, max, step, wrap
+//   wrap = 1 -> stepping past an end jumps to the other end (a switch)
+//          0 -> stepping past an end stops there (a wide range)
+//   Hint rows sit above the seed rows (v0.6.0): hint is the higher-value
+//   feature, so it gets the top of the menu.
+//   row 1  No Gameover -- the 不疮 switch, read by nogameover_hook
+//   row 2  Lock Power  -- read by ovl_lockpower, which locks onto the
+//                        power you have at the moment you turn it on
+//   row 3  Hint        -- master switch for the hint markers
+//   row 4  Capture     -- write the player's current spot into hint/*.txt
+//   row 5  Frame       -- read-only: the stage frame counter
+//   row 6  Lock Seed   -- this IS SEED_ON: turning it on grabs the seed
+//                        the current run is using into row 7
+//   row 7  Seed        -- this IS SEL_SEED, used by seed_hook when row 6
+//                        is on.  Z types digits; the step is only a coarse
+//                        nudge, because 4294967295 is ten digits long.
+//   row 8  Hit         -- read-only: how many times you have been hit
+//   (the old row 11, Freeze, is gone: it never worked and the user asked
+//    for it to be dropped -- see plan-hint.md 19)
+OVL_ROWS:
+  dd TXT_OVL_NOGAMEOVER, OVL_V_NOGAMEOVER, 0, 1,        1,       1
+  dd TXT_OVL_LOCKPWR,    OVL_V_LOCKPWR,    0, 1,        1,       1
+  dd TXT_OVL_HINT,       OVL_V_HINT,       0, 1,        1,       1
+  // v0.7.7  Player + -- the self-machine judgement-point cross, ported
+  //                     from le03.  It is gated by its OWN switch, not
+  //                     by Hint, and it is drawn from the same playfield
+  //                     position through the same Fix/ORIGIN transform as
+  //                     the hint markers, so the two always agree.
+  dd TXT_OVL_PCROSS,     OVL_V_PCROSS,     0, 1,        1,       1
+  dd TXT_OVL_CAPTURE,    OVL_V_CAPTURE,    0, 0,        0,       0
+  dd TXT_OVL_FRAME,      OVL_V_FRAME,      0, 0,        0,       0
+  // row 6  Pattern -- read-only: which boss pattern is running.  It is the
+  //                     game's own 0-based "Pattern number" (0 = the first
+  //                     pattern of the stage = the mid non-spell), which is
+  //                     exactly what boss:P:F takes.  -1 means "no pattern"
+  //                     (mid-stage, or no trustworthy number).
+  dd TXT_OVL_PATTERN,    OVL_V_PATTERN,   0, 0,        0,       0
+  dd TXT_OVL_LOCKSEED,   SEED_ON,          0, 1,        1,       1
+  dd TXT_OVL_SEED,       SEL_SEED,         0, FFFFFFFF, 1000000, 0
+  dd TXT_OVL_DEBT,       OVL_V_DEBT,       0, 0,        0,       0
+  dd TXT_OVL_FIX_X,      HINT_DX,         0, 80,       1,       0
+  dd TXT_OVL_FIX_Y,      HINT_DY,         0, 80,       1,       0
+
+// Parallel to OVL_ROWS, one dword per row, in the same order.
+//   0                -> the row draws its own format string (a number)
+//   &{off,on} pair   -> the row draws that text instead, chosen by the
+//                       value, so a 0..1 switch reads off/on
+// Z flips any row whose range is exactly 0..1 (see ovl_type_toggle).
+OVL_ALT:
+  dd ALT_NOGAMEOVER
+  dd ALT_LOCKPWR
+  dd ALT_HINT
+  dd ALT_PCROSS
+  dd 0
+  dd 0
+  dd 0
+  dd ALT_LOCKSEED
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+OVL_V_NOGAMEOVER:
+  dd 0
+OVL_V_LOCKPWR:
+  dd 0
+OVL_V_HINT:
+  // Defaults to ON: the cave's data is part of the section's raw bytes, so
+  // this is the value the process starts with -- hint markers are visible
+  // from the moment the game launches, and the F12 row is there to turn
+  // them off.  (Verified: HINT_OX/HINT_FADE_R/OVL_ROWS_N all load from
+  // these same bytes rather than starting zeroed.)
+  dd 1
+OVL_V_PCROSS:
+  // Defaults to ON, exactly like the le03 Player+ row.  It is a read-out
+  // of where the judgement point really is, so it is most useful left on;
+  // the F12 row is there to hide it again.
+  dd 1
+OVL_V_CAPTURE:
+  dd 0
+OVL_V_FRAME:
+  dd 0
+// Mirror of HINT_PAT_IDX for the read-only Pattern row.  Kept separate so
+// the menu shows what the HINT LOGIC is actually using, rather than a
+// second reading of the game that could disagree with it.
+OVL_V_PATTERN:
+  dd 0
+OVL_V_DEBT:
+  dd 0
+// ---- hint geometry (v0.6.0) -----------------------------------------
+// The playfield is 384 x 448 with float coordinates at [[player]+0], and
+// it sits at (31,16) in the same 640x480 panel space.  Measured, not
+// guessed: scanning the frame for the strongest vertical/horizontal edges
+// puts the playfield borders at panel x 31.0 and 415.7 (384.7 apart) and
+// panel y 15.6 and 464.7 (449.1 apart), and the player's own coordinates
+// then land exactly on the sprite (223.6 measured vs 223.0 predicted).
+// These are plain variables rather than immediates so they can be
+// re-calibrated from outside if a different resolution ever disagrees.
+HINT_OX:
+  dd 1F
+HINT_OY:
+  dd 10
+HINT_SIZE:
+  dd 10          // the marker arm length in pixels (0x10 = 16)
+HINT_CX:
+  dd 0           // scratch: the marker centre in panel space
+HINT_CY:
+  dd 0
+HINT_HALF:
+  dd 0
+// Raw playfield coordinates as the marker saw them, so HINT_OX/HINT_OY can
+// be solved for exactly by comparing these with a screenshot.
+DBG_PX:
+  dd 0
+DBG_PY:
+  dd 0
+DBG_STAGE:
+  dd 0           // [DBG_STAGE+0x4C] is the stage frame counter
+// The power Lock Power has latched onto, plus a one-shot so the capture
+// happens on exactly the first frame after the switch goes on.
+OVL_LP_TARGET:
+  dd 0
+OVL_LP_HELD:
+  dd 0
+// How many times the player has been hit THIS ATTEMPT.
+//
+// It was originally named for "owed lives", on the assumption that the
+// hook only runs on a FATAL hit.  It does not: game+B980C sits in the death
+// sequence (entered when [edi+0x24c] >= 0x14), which every hit runs through
+// -- including a deathbomb, where a bomb is used on the hit frame and no
+// life is actually lost.  So it is a hit counter, and the menu row says so.
+//
+// v0.7.5 -- it is now ZEROED at every stage start by the initFrameTimer
+// hook, so it counts hits for the attempt in front of you rather than
+// accumulating from launch.  That hook fires once per stage construction,
+// which includes every practice-mode retry.
+NOSORE_DEBT:
+  dd 0
+TXT_OVL_TITLE:
+  db 46 00 31 00 32 00 20 00 4D 00 45 00 4E 00 55 00 00 00
+TXT_OVL_NOGAMEOVER:
+  db 4E 00 6F 00 20 00 47 00 61 00 6D 00 65 00 6F 00 76 00 65 00 72 00 3A 00 20 00 25 00 64 00 00 00
+TXT_OVL_LOCKPWR:
+  db 4C 00 6F 00 63 00 6B 00 20 00 50 00 6F 00 77 00 65 00 72 00 3A 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_HINT:
+  db 48 00 69 00 6E 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_PCROSS:
+  db 50 00 6C 00 61 00 79 00 65 00 72 00 20 00 2B 00 3A 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_CAPTURE:
+  db 43 00 61 00 70 00 74 00 75 00 72 00 65 00 3A 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_FRAME:
+  db 46 00 72 00 61 00 6D 00 65 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_PATTERN:
+  db 50 00 61 00 74 00 74 00 65 00 72 00 6E 00 3A 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_LOCKSEED:
+  db 4C 00 6F 00 63 00 6B 00 20 00 53 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_SEED:
+  db 53 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 75 00 00 00
+TXT_OVL_SEED_EDIT:
+  db 53 00 65 00 65 00 64 00 5B 00 74 00 79 00 70 00 65 00 5D 00 3A 00 20 00 20 00 25 00 75 00 00 00
+TXT_OVL_DEBT:
+  db 48 00 69 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_FIX_X:
+  db 46 00 69 00 78 00 20 00 58 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_FIX_Y:
+  db 46 00 69 00 78 00 20 00 59 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+// ---- on/off labels for the 0..1 switch rows ----
+// Each ALT_* is a 2-dword table {text_if_0, text_if_1} pointed at by the
+// matching slot of OVL_ALT.  These strings carry no format specifier, so
+// the value argument the draw loop pushes is simply ignored.
+ALT_NOGAMEOVER:
+  dd TXT_NOGAMEOVER_OFF, TXT_NOGAMEOVER_ON
+ALT_LOCKPWR:
+  dd TXT_LOCKPWR_OFF, TXT_LOCKPWR_ON
+ALT_HINT:
+  dd TXT_HINT_OFF, TXT_HINT_ON
+ALT_PCROSS:
+  dd TXT_PCROSS_OFF, TXT_PCROSS_ON
+ALT_LOCKSEED:
+  dd TXT_LOCKSEED_OFF, TXT_LOCKSEED_ON
+TXT_NOGAMEOVER_OFF:
+  db 4E 00 6F 00 20 00 47 00 61 00 6D 00 65 00 6F 00 76 00 65 00 72 00 3A 00 20 00 6F 00 66 00 66 00 00 00
+TXT_NOGAMEOVER_ON:
+  db 4E 00 6F 00 20 00 47 00 61 00 6D 00 65 00 6F 00 76 00 65 00 72 00 3A 00 20 00 6F 00 6E 00 20 00 00 00
+TXT_LOCKPWR_OFF:
+  db 4C 00 6F 00 63 00 6B 00 20 00 50 00 6F 00 77 00 65 00 72 00 3A 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_LOCKPWR_ON:
+  db 4C 00 6F 00 63 00 6B 00 20 00 50 00 6F 00 77 00 65 00 72 00 3A 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+TXT_HINT_OFF:
+  db 48 00 69 00 6E 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_HINT_ON:
+  db 48 00 69 00 6E 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+TXT_PCROSS_OFF:
+  db 50 00 6C 00 61 00 79 00 65 00 72 00 20 00 2B 00 3A 00 20 00 20 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_PCROSS_ON:
+  db 50 00 6C 00 61 00 79 00 65 00 72 00 20 00 2B 00 3A 00 20 00 20 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+TXT_LOCKSEED_OFF:
+  db 4C 00 6F 00 63 00 6B 00 20 00 53 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_LOCKSEED_ON:
+  db 4C 00 6F 00 63 00 6B 00 20 00 53 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+
+// ================= settings file data (v0.7.8) ====================
+CFG_TAILW:
+  db 70 00 72 00 61 00 63 00 2E 00 63 00 66 00 67 00 00 00
+CFG_KEY:
+  db 70 6C 61 79 65 72 70 6C 75 73 3D
+CFG_PATHW:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00
+CFG_BUF:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+CFG_LINE:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+CFG_H:
+  dd 0
+CFG_RD:
+  dd 0
+CFG_LEN:
+  dd 0
+CFG_VAL:
+  dd 0
+CFG_LOADED:
+  dd 0
+// -1 so the very first cfg_tick_chk cannot match by accident.
+CFG_LAST:
+  dd FFFFFFFF
+CFG_WROTE:
+  dd 0
+
+cave+5000:
+// ---- F12 overlay (v0.4.0) diagnostic counters ----------------------
+// Polled by tools/probe.py with ReadProcessMemory.  They stay in the
+// shipped build: a few dozen bytes buys a remote answer to "is the hook
+// running?" without attaching a debugger.
+PRB_FRAMES:
+  dd 0
+PRB_INPUT:
+  dd 0
+PRB_BLIT:
+  dd 0
+PRB_F12:
+  dd 0
+PRB_F12N:
+  dd 0
+PRB_OPEN:
+  dd 0
+PRB_PRES:
+  dd 0
+// v0.4.0
+PRB_NOGAMEOVER:
+  dd 0
+PRB_LP:
+  dd 0
+// v0.5.0 -- seed lock
+PRB_SEEDN:
+  dd 0
+PRB_SEEDON:
+  dd 0
+PRB_SEEDVAL:
+  dd 0
+// Diagnostic mirror of the live player object, refreshed once per frame
+// by ovl_lockpower.  Read [DBG_PLAYER] to get the pointer; lives are at
+// +0x48, bombs +0x60, power +0x7C.
+DBG_PLAYER:
+  dd 0
+
+// ---- hint files (v0.6.0) ----
+// GetModuleFileNameW writes the exe path here; we chop it at the last
+// backslash and append "hint\<stage>.txt".
+HINT_PATHW:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+HINT_PRE:
+  db 68 00 69 00 6E 00 74 00 5C 00 00 00
+HINT_GLOB:
+  db 2A 00 2E 00 74 00 78 00 74 00 00 00
+HINT_FIND:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+HINT_FH:
+  dd 0
+HINT_PRELEN:
+  dd 0
+HINT_OK:
+  dd 0
+HINT_SUF:
+  db 2E 00 74 00 78 00 74 00 00 00
+HINT_BUFMAX:
+  dd 1800
+HINT_HANDLE:
+  dd 0
+HINT_GOT:
+  dd 0
+HINT_LEN:
+  dd 0
+// ---- marker shape and colour ----
+HINT_SYM:
+  dd 2B
+HINT_COL:
+  dd FF
+HINT_COL_DIM:
+  dd 40
+HINT_FADE_R:
+  dd 28
+// Marker correction, added to the marker's playfield coordinates.
+// BIASED by 0x40 because ovl_apply compares unsigned, so a row
+// cannot hold a negative number: 0x40 means no shift, 0x40+n moves
+// the marker n pixels right/down.  Menu rows Fix X / Fix Y expose
+// this so the marker can be dialled onto the game's own hitbox dot.
+HINT_DX:
+  dd 41
+HINT_DY:
+  dd 40
+HINT_DASH:
+  dd 10
+HINT_USECOL:
+  dd 0
+HINT_DASHLEN:
+  dd 0
+HINT_DASHEND:
+  dd 0
+// ---- parser state (v0.6.3) ----
+HINT_P:
+  dd 0
+HINT_END:
+  dd 0
+HINT_CURSTAGE:
+  dd 0
+HINT_WANT:
+  dd 0
+HINT_N:
+  dd 0
+HINT_MAXN:
+  dd 18
+HINT_SKIP:
+  dd 0
+HINT_TOK:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+HINT_E_MARK:
+  dd 0
+HINT_E_SIZE:
+  dd 0
+HINT_E_CHAR:
+  dd 0
+HINT_E_X:
+  dd 0
+HINT_E_Y:
+  dd 0
+HINT_E_SK:
+  dd 0
+HINT_E_SP:
+  dd 0
+HINT_E_SF:
+  dd 0
+HINT_E_EK:
+  dd 0
+HINT_E_EP:
+  dd 0
+HINT_E_EF:
+  dd 0
+HINT_TKIND:
+  dd 0
+HINT_TPAT:
+  dd 0
+HINT_TFR:
+  dd 0
+HINT_CUR:
+  dd 0
+HINT_ROW:
+  dd 0
+// ---- capture state (v0.6.4) ----
+HINT_C_X:
+  dd 0
+HINT_C_Y:
+  dd 0
+HINT_C_F:
+  dd 0
+HINT_CHAP_END:
+  dd 0
+// ---- boss pattern state (v0.7.2) ----
+// HINT_PAT_IDX is the 0-BASED pattern ordinal the boss is on right now --
+// the very same number the hint file's boss:P:F uses: 0 midnon, 1 midspell,
+// 2 non1, 3 spell1, 4 non2, 5 spell2 ... for stage 1.  It is a straight
+// copy of the game's own [boss+0x44] (no offset -- see the evidence chain
+// in ovl_boss_poll) and is only meaningful while HINT_PAT_ON is 1.
+// HINT_PAT_FRAME counts frames into the pattern (our own clock).
+HINT_PAT_IDX:
+  dd 0
+// 1 only while a boss or mid-boss is on screen AND its pattern number is
+// trustworthy.  Pattern 0 is a real pattern (the mid non-spell), so "no
+// pattern" can never be spelled with a number -- it needs this flag (the
+// Pattern row renders ON=0 as -1).
+HINT_PAT_ON:
+  dd 0
+// Frames into the current pattern, counted by US (one per frame) rather
+// than as a delta on [stage+0x4C], which freezes during intro dialogue.
+HINT_PAT_FRAME:
+  dd 0
+// Was a boss on screen last frame?  A 0->1 edge means a new fight, whose
+// object is built carrying the previous fight's last pattern number.
+HINT_PAT_WAS:
+  dd 0
+// The last pattern actually accepted (FFFFFFFF = none yet), and the value
+// to ignore until the new fight's own first pattern starts.
+HINT_PAT_LAST:
+  dd FFFFFFFF
+HINT_PAT_SKIP:
+  dd FFFFFFFF
+// The time specs the capture is about to write (see hint_emit_time).
+HINT_C_KIND:
+  dd 0
+HINT_C_PID:
+  dd 0
+HINT_C_PF:
+  dd 0
+HINT_C_EKIND:
+  dd 0
+HINT_C_EPID:
+  dd 0
+HINT_C_EF:
+  dd 0
+HINT_IEDI:
+  dd 0
+HINT_CAPLEN:
+  dd 0
+HINT_CAPLEN2:
+  dd 0
+HINT_WROTE:
+  dd 0
+HINT_CAP_OK:
+  dd 0
+HINT_LINE:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+HINT_LINE2:
+  db 00 00 00 00 00 00 00 00
+// Scratch for the tail-of-file newline check: holds the file's last byte,
+// and is written back as CRLF when that byte is not already a newline.
+HINT_LASTCH:
+  db 00 00
+OVL_PREV_CAP:
+  dd 0
+SECTION_CNT:
+ db 7 6 8 8 9 5 A
+SECTION_TABLE:
+ dd sec_0
+ dd sec_1
+ dd sec_2
+ dd sec_3
+ dd sec_4
+ dd sec_5
+ dd sec_6
+sec_0:
+  dd C7 257 3E7 63F 8FB A8B D47
+sec_1:
+  dd F9 3E7 707 8FB D47 1387
+sec_2:
+  dd 0 44B 76B A27 C1B ED7 125B 1643
+sec_3:
+  dd 12B 6D5 AEF 10CB 13EB 16A7 1A2B 206B
+sec_4:
+  dd 12B 577 7CF AEF F9F 144F 1A8F 1DAF 225F
+sec_5:
+  dd 18F 3E7 7CF A8B C7F
+sec_6:
+  dd 12B 351 739 C4D 1067 14B3 176F 1AF3 22C3 251B
+MODE_TXTS:
+ dd mode_0
+ dd mode_1
+mode_0:
+  db 42 00 6f 00 73 00 73 00 00 00
+mode_1:
+  db 53 00 65 00 63 00 74 00 69 00 6f 00 6e 00 00 00
+TXT_MODE:
+  db 4d 00 6f 00 64 00 65 00 3a 00 20 00 25 00 73 00 00 00
+TXT_SECTION:
+  db 53 00 65 00 63 00 74 00 69 00 6f 00 6e 00 3a 00 20 00 25 00 64 00 00 00
+TXT_LIFE:
+  db 4c 00 69 00 66 00 65 00 3a 00 20 00 25 00 64 00 00 00
+TXT_BOMB:
+  db 42 00 6f 00 6d 00 62 00 3a 00 20 00 25 00 64 00 00 00
+
+// Per-character default bombs, in the game's own character order.
+BOMB_DEF:
+  dd 4 2 3 5
+LAST_CHAR:
+  dd ffffffff
+
+// Wrap dwell state (see wrap_latch).
+WRAP_LOCK:
+  dd 0
+WRAP_TIMER:
+  dd 0
+cave+6000:
+HINT_BUF:
+cave+7800:
+HINT_ARR:
+cave_end:
+
+[DISABLE]
+game+CFFCD:
+ db C7 05 10 51 A6 00 01 00 00 00
+game+14BD50:
+ db 55 8B EC 81 EC CC 04 00 00
+game+CF255:
+ db E8 76 1A 07 00
+game+CF2B5:
+ db E8 16 1A 07 00
+game+CF445:
+ db E8 86 18 07 00
+game+CF7CD:
+ db E8 FE 14 07 00
+game+B980C:
+ db 83 78 48 00 7F 2E
+game+B9B05:
+ db 8B 07 83 78 7C 00 7D 07 C7 40 7C 00 00 00 00 8B 07 81 78 7C F4 01 00 00 7C 07 C7 40 7C F4 01 00 00
+game+B2BD9:
+ db E8 F2 D8 01 00
+game+73F67:
+ db 0a
+game+7405F:
+ db 68 36 01 00 00
+game+7409B:
+ db 68 36 01 00 00
+game+74112:
+ db 68 d0 9c 83 00
+game+B264E:
+ db 8b f9 0f 57 c0
+game+B32C6:
+ db c7 47 4c 00 00 00 00
+game+27E90:
+ db 89 07 e8 c8 69 29 00
+game+B67E9:
+ db e8 c2 bc 02 00
+game+B37CE:
+ db c7 87 24 28 00 00 00 00 00 00
+game+B902B:
+ db c7 40 48 09 00 00 00
+game+B9064:
+ db 8b 84 83 a8 00 00 00
+game+B9091:
+ db c7 40 58 00 00 00 00
+game+C29A5:
+ db 8b 46 4c 3b 46 68
+game+C29D0:
+ db 6a 00 ff 76 30
+game+C49FB:
+ db 80 bb a1 00 00 00 01
+game+C4C92:
+ db 80 bb a1 00 00 00 01
+game+C4DAE:
+ db 80 bb a1 00 00 00 01
+game+C4F80:
+ db 80 bb a1 00 00 00 01
+game+C513E:
+ db 80 bb a1 00 00 00 00
+game+6B7BA:
+ db c7 05 88 08 9e 00 01 00 00 00
+game+6B837:
+ db 81 fe 7c 0b 00 00
+game+27724:
+ db c7 83 24 09 00 00 94 2f 00 00
+game+D5DB:
+ db c7 46 08 00 00 00 00
+game+D698:
+ db e8 10 08 2b 00
+game+D588:
+ db e8 e2 15 2b 00
