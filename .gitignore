@@ -1,0 +1,62 @@
+# ============================================================================
+#  This repository is a CURATED SUBSET of a larger development workspace.
+#
+#  Everything is ignored by default; only the paths un-ignored below are
+#  published.  Doing it this way (rather than as a list of exclusions) means
+#  game binaries, one-off debugging scripts and intermediate builds cannot
+#  end up in the repo by accident -- and "what is public" is this one file,
+#  which anyone can read in ten seconds.
+#
+#  To publish something new, add a `!` line for it.
+# ============================================================================
+
+/*
+
+# ---- documentation -------------------------------------------------------
+!/README.md
+!/CHANGELOG.md
+!/LICENSE
+!/版本历史.md
+!/三作差异清单.md
+!/hint使用说明.md
+!/hint-manual-EN.md
+!/种子bug分析.md
+!/desync分析.md
+
+# ---- how to build it -----------------------------------------------------
+!/build.py
+!/requirements.txt
+
+# ---- git's own configuration --------------------------------------------
+!/.gitignore
+!/.gitattributes
+
+# ---- the patch sources (one per game) -----------------------------------
+#  Each .cea is the complete patch: F12 menu, hitbox overlay, speed control,
+#  Lock Bomb / Autobomb, Miss counter and the developer-mode gate.  The two
+#  DLLs it embeds are built from src/ by build.py and pulled in with incbin.
+!/work/
+/work/*
+!/work/Le01-prac.cea
+!/work/Le02-prac.cea
+!/work/Le03-prac.cea
+
+# ---- the embedded DLLs' sources -----------------------------------------
+!/src/
+/src/*
+!/src/hitbox/
+!/src/hitbox/Le01hitbox.cpp
+!/src/hitbox/Le02hitbox.cpp
+!/src/hitbox/Le03hitbox.cpp
+!/src/hitbox/_hbblend.h
+!/src/speed/
+!/src/speed/Le03speed.cpp
+
+# ---- the build tools ----------------------------------------------------
+!/tools/
+/tools/*
+!/tools/cea.py
+!/tools/make_text_writable.py
+!/tools/verify_build.py
+!/tools/patnames.py
+!/tools/md2html.py

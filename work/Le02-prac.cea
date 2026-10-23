@@ -73,6 +73,7 @@ assert(game+74112,68 d0 9c 83 00)
 assert(game+B264E,8b f9 0f 57 c0)
 assert(game+B32C6,c7 47 4c 00 00 00 00)
 assert(game+27E90,89 07 e8 c8 69 29 00)
+assert(game+2931B,8b 8f d4 00 00 00)
 assert(game+B67E9,e8 c2 bc 02 00)
 assert(game+B37CE,c7 87 24 28 00 00 00 00 00 00)
 assert(game+B9091,c7 40 58 00 00 00 00)
@@ -95,6 +96,13 @@ assert(game+73F67,0a)
 assert(game+7405F,68 36 01 00 00)
 assert(game+7409B,68 36 01 00 00)
 assert(cave+3FF0,4c 45 50 52 41 43 32 3a 46 49 58 45 44 3a 31 00)
+// ---- hitbox overlay (v0.11.0-alpha): exact hook sites ----
+// game+C2D50 is the player-collision dispatcher entry: ECX = current stage.
+// Displacing `push ebp / mov ebp,esp / and esp,-8` (6 bytes) is safe.
+assert(game+C2D50,55 8B EC 83 E4 F8)
+// game+1C75F0 is the final scene-composite `call game+1C4720` (5 bytes).
+// The scene texture is complete and the game is about to present it.
+assert(game+1C75F0,E8 2B D1 FF FF)
 label(customMenuRender)
 label(menu_keys)
 label(menu_ready)
@@ -362,7 +370,11 @@ label(draw_section)
 label(draw_row_done)
 label(callback_section)
 label(callback_sec_ok)
+label(callback_sec_no_boss)
 label(callback_sec_none)
+label(mgrNudge)
+label(mgrNudge_ret)
+label(mgrNudge_out)
 label(TAS_START)
 label(TAS_LENGTH)
 label(TAS_TIMER)
@@ -375,6 +387,10 @@ label(ovl_in_clear)
 label(ovl_toggle_done)
 label(ovl_logic_done)
 label(ovl_menu_open)
+label(ovl_pause_action)
+label(ovl_pa_done)
+label(ovl_pk_r_done)
+label(ovl_pk_q_done)
 label(ovl_up_done)
 label(ovl_down_done)
 label(ovl_left_done)
@@ -383,6 +399,16 @@ label(ovl_move_up)
 label(ovl_move_down)
 label(ovl_move_left)
 label(ovl_move_right)
+label(ovl_up_loop)
+label(ovl_up_pos)
+label(ovl_dn_loop)
+label(ovl_dn_pos)
+label(ovl_vis_l)
+label(ovl_vis_cnt)
+label(ovl_vis_next)
+label(ovl_vis_done)
+label(ovl_draw_vis)
+label(ovl_draw_next)
 label(ovl_up_ok)
 label(ovl_down_ok)
 label(ovl_move_blocked)
@@ -416,9 +442,13 @@ label(ovl_type_cancel)
 label(ovl_type_try_capture)
 label(ovl_type_switch)
 label(ovl_type_try_seed)
+label(ovl_type_try_speed)
 label(ovl_type_cancel_done)
 label(ovl_type_append)
 label(ovl_type_app_shift)
+label(ovl_type_try_switch)
+label(ovl_type_cancel_sub)
+label(ovl_title_pick)
 label(ovl_type_app_room)
 label(ovl_type_app_done)
 label(ovl_seedsw_done)
@@ -432,9 +462,106 @@ label(OVL_CUR)
 label(OVL_ROWS_N)
 label(OVL_PREV_F12)
 label(OVL_PREV_KEYS)
+label(OVL_PREV_RQ)
 label(OVL_VKBUF)
 label(OVL_ROWS)
 label(OVL_ALT)
+label(OVL_ROWS2)
+label(OVL_ROWS2_N)
+label(OVL_ALT2)
+label(OVL_SWATCH)
+label(OVL_SWATCH2)
+label(OVL_ACTIVE_TBL)
+label(OVL_ACTIVE_N)
+label(OVL_ACTIVE_CUR)
+label(OVL_ACTIVE_ALT)
+label(OVL_ACTIVE_SW)
+label(OVL_ACTIVE_FLAG)
+label(fps_tick)
+label(ft_done)
+label(ft_no_dll)
+label(ft_clamp)
+label(ft_nv_skip)
+label(fps_tick2)
+label(ftc_done)
+label(SPEED_TYPING)
+label(spd_typing_on)
+label(spd_typing_off)
+label(fps_commit_clamp)
+label(fcc_done)
+label(ftc_not_speed)
+label(ft_ok)
+label(ft_div)
+label(DLL_LOADED)
+label(SPEED_FPS)
+label(DLLNAME)
+label(ft_spd_nc)
+label(ft_spd_ne)
+label(ft_spd_fb)
+label(ft_spd_done)
+label(SPD_DLL)
+label(SPD_DLL_END)
+label(SPD_TMPBUF)
+label(SPD_TMPW)
+label(SPD_WRITTEN)
+label(SPD_HMOD)
+label(SPD_TMPNAME)
+label(NOVSYNC_PTR)
+label(NVNAME)
+label(OVL_VISN)
+label(OVL_RVIS)
+label(CFG_DEVMODE)
+label(OVL_ROWFLAG)
+label(OVL_ROWFLAG2)
+label(OVL_SUB)
+label(OVL_CUR2)
+label(OVL_PANEL_B)
+label(ovl_set_active)
+label(ovl_sa_done)
+label(ovl_sub_open)
+label(ovl_sub_open_done)
+label(OVL_V_PCOL)
+label(OVL_V_PSIZE)
+label(OVL_SWX)
+label(OVL_TYPE_KIND)
+label(OVL_TYPE_VAL)
+label(OVL_TYPE_ORIG)
+label(OVL_TYPE_HEXN)
+label(PP_PRESETS)
+label(PP_PRESETS_N)
+label(TXT_OVL_HINTCOL)
+label(TXT_OVL_HINTCOL_EDIT)
+label(TXT_OVL_PSIZE)
+label(TXT_OVL_PCOL)
+label(TXT_OVL_PCOL_EDIT)
+label(ovl_row_is_colour)
+label(ovl_ric_yes)
+label(ovl_swaprb)
+label(ovl_colour_step)
+label(ovl_cs_scan)
+label(ovl_cs_found)
+label(ovl_cs_lo)
+label(ovl_cs_store)
+label(ovl_cs_miss)
+label(ovl_cs_miss2)
+label(ovl_cs_done)
+label(ovl_swatch)
+label(ovl_sw_done)
+label(ovl_mr_normal)
+label(ovl_ml_normal)
+label(ovl_nr_normal)
+label(ovl_nl_normal)
+label(ovl_type_try_colour)
+label(ovl_type_colour_set)
+label(ovl_type_back_hex)
+label(ovl_type_append_hex)
+label(ovl_type_apph_shift)
+label(ovl_type_apph_done)
+label(ovl_td_num)
+label(ovl_td_hex)
+label(ovl_td_have)
+label(ovl_type_cancel_do)
+label(ovl_toggle)
 label(OVL_HOLD_DIR)
 label(OVL_HOLD_N)
 label(OVL_NUDGE_N)
@@ -462,6 +589,9 @@ label(HINT_PAT_FRAME)
 label(HINT_PAT_WAS)
 label(HINT_PAT_LAST)
 label(HINT_PAT_SKIP)
+label(HINT_PAT_STAGE)
+label(initFrameTimer_same_stage)
+label(initFrameTimer_pat_done)
 label(OVL_TYPE_ON)
 label(OVL_TYPE_OLD)
 label(OVL_TYPE_FRESH)
@@ -469,6 +599,27 @@ label(OVL_TYPE_LAST)
 label(OVL_PREV_SEEDSW)
 label(OVL_V_NOGAMEOVER)
 label(OVL_V_LOCKPWR)
+label(OVL_V_LOCKBOMB)
+label(OVL_V_AUTOBOMB)
+label(BOMB_TARGET)
+label(BOMB_HELD)
+label(TXT_OVL_LOCKBOMB)
+label(TXT_OVL_AUTOBOMB)
+label(ALT_LOCKBOMB)
+label(ALT_AUTOBOMB)
+label(TXT_LOCKBOMB_OFF)
+label(TXT_LOCKBOMB_ON)
+label(TXT_AUTOBOMB_OFF)
+label(TXT_AUTOBOMB_ON)
+label(CFG_K_LOCKBOMB)
+label(CFG_K_AUTOBOMB)
+label(ovl_autobomb)
+label(ovl_miss)
+label(ovl_ab_vanilla)
+label(ovl_lb_check)
+label(ovl_lb_pin)
+label(ovl_lb_off)
+label(ovl_lb_done)
 label(OVL_V_DEBT)
 label(OVL_V_HINT)
 label(OVL_V_PCROSS)
@@ -516,6 +667,7 @@ label(draw_hints_next)
 label(draw_hints_adx)
 label(draw_hints_ady)
 label(draw_hints_char_ok)
+label(draw_hints_have_col)
 label(draw_hints_boss)
 label(draw_hints_boss_start)
 label(draw_hints_boss_end)
@@ -546,6 +698,9 @@ label(HINT_DX)
 label(HINT_DY)
 label(TXT_OVL_FIX_X)
 label(TXT_OVL_FIX_Y)
+label(OVL_V_FIX_X)
+label(OVL_V_FIX_Y)
+label(HINT_F8)
 label(HINT_DASHLEN)
 label(HINT_DASHEND)
 label(HINT_P)
@@ -642,6 +797,19 @@ label(hint_tok_done)
 label(hint_atoi)
 label(hint_atoi_loop)
 label(hint_atoi_done)
+label(HINT_E_COL)
+label(HINT_TMP_N)
+label(HINT_TMP_COL)
+label(hint_tok_line)
+label(htl_skip)
+label(htl_adv)
+label(htl_tok)
+label(htl_loop)
+label(htl_adv2)
+label(htl_done)
+label(htl_empty)
+label(hint_parse_col)
+label(hint_pc_done)
 label(hint_time)
 label(hint_time_num)
 label(hint_store)
@@ -656,10 +824,12 @@ label(parse_stage_word)
 label(ovl_draw_panel)
 label(ovl_frame_done)
 label(TXT_OVL_TITLE)
+label(TXT_OVL_TITLE2)
 label(TXT_OVL_NOGAMEOVER)
 label(TXT_OVL_LOCKPWR)
 label(TXT_OVL_LOCKSEED)
 label(TXT_OVL_DEBT)
+label(TXT_OVL_SPEED)
 label(TXT_OVL_SEED)
 label(TXT_OVL_SEED_EDIT)
 label(TXT_OVL_HINT)
@@ -673,12 +843,58 @@ label(cfg_path)
 label(cfg_path_cut)
 label(cfg_path_cp)
 label(cfg_path_done)
+define(CODE_LEN, 26)
 label(cfg_load)
-label(cfg_len_ok)
-label(cfg_scan)
-label(cfg_cmp)
-label(cfg_cmp_no)
-label(cfg_apply)
+label(code_present)
+label(cp_scan)
+label(cp_miss)
+label(cp_found)
+label(cp_done)
+label(cfg_load_end)
+label(cfg_save_close2)
+label(cfg_save_code)
+label(CODE_STR)
+label(CODE_LINE)
+label(CODE_SEEN)
+label(CFG_TABLE)
+label(CFG_N)
+label(CFG_ENT)
+label(CFG_TMPD)
+label(CFG_K_DEVMODE)
+label(CFG_K_HINT)
+label(CFG_K_HINTCOL)
+label(CFG_K_PCROSS)
+label(CFG_K_PPSIZE)
+label(CFG_K_PPCOL)
+label(CFG_K_FIXX)
+label(CFG_K_FIXY)
+label(cfg_find)
+label(cfg_find_scan)
+label(cfg_find_cmp)
+label(cfg_find_miss)
+label(cfg_find_hit)
+label(cfg_find_adv)
+label(cfg_find_no)
+label(cfg_atoi)
+label(cfg_atoi_loop)
+label(cfg_atoi_done)
+label(cfg_itoa)
+label(cfg_itoa_loop)
+label(cfg_itoa_pop)
+label(cfg_itoa_out)
+label(cfg_snap)
+label(cfg_snap_loop)
+label(cfg_snap_done)
+label(cfg_load_entry)
+label(cfg_load_next)
+label(cfg_load_ok)
+label(cfg_save_loop)
+label(cfg_save_cp)
+label(cfg_save_close)
+label(cfg_tick_chk)
+label(cfg_tick_scan)
+label(cfg_tick_save)
+label(cfg_tick_done)
 label(cfg_load_done)
 label(cfg_save)
 label(cfg_save_cp)
@@ -687,7 +903,6 @@ label(cfg_tick)
 label(cfg_tick_chk)
 label(cfg_tick_done)
 label(CFG_TAILW)
-label(CFG_KEY)
 label(CFG_PATHW)
 label(CFG_BUF)
 label(CFG_LINE)
@@ -744,6 +959,29 @@ label(SEED_FP)
 label(PRB_SEEDN)
 label(PRB_SEEDON)
 label(PRB_SEEDVAL)
+// ---- hitbox overlay (v0.11.0-alpha) ----
+label(ovl_hb_stage)
+label(ovl_hb_draw)
+label(ovl_hb_skip)
+label(ovl_hb_call)
+label(HB_STAGE)
+label(HB_ACTIVE)
+label(HB_FN)
+label(ovl_hb_nc)
+label(ovl_hb_ne)
+label(ovl_hb_fb)
+label(ovl_hb_ld)
+label(HB_DLL)
+label(HB_DLL_END)
+label(HB_TMPBUF)
+label(HB_TMPW)
+label(HB_WRITTEN)
+label(HB_HMOD)
+label(HB_TMPNAME)
+label(HB_TRIED)
+label(HB_CTX)
+label(HB_DLLNAME)
+label(HB_FNNAME)
 label(cave_end)
 label(customMenuRender_ret)
 label(beginPracticeStage_ret)
@@ -785,6 +1023,14 @@ game+B32C6:
  nop
 game+B32CD:
 initFrameTimer_ret:
+// ---- midboss/boss phase fix ------------------------------------------
+// Vanilla `mov ecx, [edi+0xd4]` (edi = the stage manager, +0xd4 = the
+// stage timer).
+game+2931B:
+ jmp mgrNudge
+ nop
+game+29321:
+mgrNudge_ret:
 game+27E90:
  jmp applyPatternIdWarp
  nop
@@ -979,7 +1225,37 @@ game+B9B26:
 game+B2BD9:
  call seed_hook
 game+B2BDE:
+// ---- hitbox overlay (v0.11.0-alpha) ----
+// Stage capture at the collision dispatcher, and the display hook at the
+// final scene composite. Both are strict supersets of the displaced code:
+// with the DLL absent or devmode off the game runs its own instructions.
+game+C2D50:
+ jmp ovl_hb_stage
+ nop
+game+1C75F0:
+ call ovl_hb_draw
+// v0.12.0-alpha: autobomb takes over the player state-machine dispatch.
+// Displaced: mov eax,[ecx+54] / dec eax / cmp eax,5 (7 bytes).
+game+B9766:
+ jmp ovl_autobomb
+ nop
+ nop
+// Miss counter: the call right after `dec [player+0x48]`.
+game+B9897:
+ call ovl_miss
 cave:
+DLL_LOADED:
+  dd 0
+SPEED_FPS:
+  dd 3C
+SPEED_TYPING:
+  dd 0
+DLLNAME:
+  db 4C 65 30 33 73 70 65 65 64 2E 64 6C 6C 00
+NOVSYNC_PTR:
+  dd 0
+NVNAME:
+  db 67 5F 6E 6F 56 73 79 6E 63 00
 // =================================================================== //
 // F12 overlay (v0.4.0) -- infrastructure.                            //
 //   game+CFFCD  -> logic (read keys, menu)                            //
@@ -1049,9 +1325,14 @@ ovl_in_done:
   popfd
   ret
 
+fps_tick:
+  jmp fps_tick2
+
+
 overlay_logic:
   pushfd
   pushad
+  call fps_tick
   // A new frame starts here: allow exactly one overlay draw this frame.
   mov dword ptr [OVL_DRAWN], 0
   // ---- settings file (v0.7.8): load once, then persist any change ----
@@ -1246,6 +1527,32 @@ ovl_boss_mirror:
   // ---- the physical keyboard, into our own 256-byte buffer ----
   push OVL_VKBUF
   call dword ptr [KBD_IAT]
+  // ---- v0.8.0: pause-menu quick keys (R = restart, Q = title) ----------
+  // These do NOT drive the menu and do NOT inject keystrokes: they write the
+  // same scene phase the menu's 从头再来 / 返回标题 items write once confirmed.
+  // Inert unless the pause menu is open, so R/Q are harmless in play.
+  mov al, byte ptr [OVL_VKBUF+52]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_RQ+0]
+  mov byte ptr [OVL_PREV_RQ+0], al
+  cmp al, cl
+  je ovl_pk_r_done
+  test al, al
+  jz ovl_pk_r_done
+  mov edx, 6
+  call ovl_pause_action
+ovl_pk_r_done:
+  mov al, byte ptr [OVL_VKBUF+51]
+  and al, 80
+  mov cl, byte ptr [OVL_PREV_RQ+1]
+  mov byte ptr [OVL_PREV_RQ+1], al
+  cmp al, cl
+  je ovl_pk_q_done
+  test al, al
+  jz ovl_pk_q_done
+  mov edx, 9
+  call ovl_pause_action
+ovl_pk_q_done:
   movzx eax, byte ptr [OVL_VKBUF+7B]
   mov [PRB_F12], eax
   // ---- F12 (VK 7B) rising edge toggles the menu ----
@@ -1270,10 +1577,17 @@ ovl_toggle_done:
   // and make sure the Seed row is showing its normal label again.
   mov dword ptr [OVL_PREV_KEYS], 0
   mov dword ptr [OVL_PREV_KEYS+4], 0
+  // v0.7.11 -- with the panel closed the row set is the main table again,
+  // so F12 always reopens on the main menu.
+  mov dword ptr [OVL_SUB], 0
   call ovl_type_exit
   call ovl_reset_hold
   jmp ovl_logic_done
 ovl_menu_open:
+  // v0.7.11 -- pick up the live row set before any key is interpreted, so
+  // the input handler and the renderer always agree even if OVL_SUB
+  // changed since the last frame.
+  call ovl_set_active
   mov al, byte ptr [OVL_VKBUF+26]
   and al, 80
   mov cl, byte ptr [OVL_PREV_KEYS+0]
@@ -1388,24 +1702,106 @@ ovl_logic_done:
   popfd
   ret
 
+// ---- v0.8.0 ovl_pause_action: edx = scene phase to switch to ----------
+// 6 = restart the current stage (从头再来), 9 = back to the title (返回标题).
+// This is exactly what the game's own pause menu does once the confirmation
+// box is accepted -- Le02 v1.01a 0x4C87AA..0x4C87D6:
+//     mov dword [esi+283C], 0        ; the menu's own input-delay timer
+//     mov dword [esi+114], 6 | 9     ; scene phase
+//     ret
+// so we reuse its path instead of driving the menu: nothing flashes and the
+// cursor never moves.
+//
+// GATE: the scene phase must be 1.  The phase lives at [scene+114] and the
+// dispatcher (0x4CC2D6, jump table 0x4CC4C4) routes phase 1 to the pause-menu
+// update function 0x4C8450 -- so phase 1 *is* "the pause menu is open".
+// R/Q are therefore inert during ordinary play.  (Le03 keeps a different but
+// equivalent gate -- the game's own pause flag -- see plan-pause-hotkeys.md.)
+ovl_pause_action:
+  pushfd
+  pushad
+  mov eax, [DBG_STAGE]
+  cmp eax, 10000
+  jb ovl_pa_done
+  cmp eax, 7FFF0000
+  ja ovl_pa_done
+  mov ecx, [eax+30]
+  cmp ecx, 1
+  jb ovl_pa_done
+  cmp ecx, 7
+  ja ovl_pa_done
+  cmp dword ptr [eax+114], 1
+  jne ovl_pa_done
+  mov dword ptr [eax+283C], 0
+  mov [eax+114], edx
+ovl_pa_done:
+  popad
+  popfd
+  ret
+
+// Skips developer-only rows while devmode is off; the search wraps and
+// gives up after one full turn so an all-hidden table cannot spin.
 ovl_move_up:
-  mov eax, [OVL_CUR]
+  push ebx
+  push edx
+  push esi
+  push edi
+  mov ecx, [OVL_ACTIVE_CUR]
+  mov edx, [OVL_ACTIVE_FLAG]
+  mov ebx, [OVL_ACTIVE_N]
+  mov edi, ebx
+  mov eax, [ecx]
+ovl_up_loop:
   dec eax
-  jns ovl_up_ok
-  mov eax, [OVL_ROWS_N]
-  dec eax
+  jns ovl_up_pos
+  lea eax, [ebx-1]
+ovl_up_pos:
+  movzx esi, byte ptr [edx+eax]
+  test esi, 1
+  jz ovl_up_ok
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne ovl_up_ok
+  dec edi
+  jz ovl_up_ok
+  jmp ovl_up_loop
 ovl_up_ok:
-  mov [OVL_CUR], eax
+  mov [ecx], eax
+  pop edi
+  pop esi
+  pop edx
+  pop ebx
   ret
 
 ovl_move_down:
-  mov eax, [OVL_CUR]
+  push ebx
+  push edx
+  push esi
+  push edi
+  mov ecx, [OVL_ACTIVE_CUR]
+  mov edx, [OVL_ACTIVE_FLAG]
+  mov ebx, [OVL_ACTIVE_N]
+  mov edi, ebx
+  mov eax, [ecx]
+ovl_dn_loop:
   inc eax
-  cmp eax, [OVL_ROWS_N]
-  jl ovl_down_ok
+  cmp eax, ebx
+  jl ovl_dn_pos
   xor eax, eax
+ovl_dn_pos:
+  movzx esi, byte ptr [edx+eax]
+  test esi, 1
+  jz ovl_down_ok
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne ovl_down_ok
+  dec edi
+  jz ovl_down_ok
+  jmp ovl_dn_loop
 ovl_down_ok:
-  mov [OVL_CUR], eax
+  mov [ecx], eax
+  pop edi
+  pop esi
+  pop edx
+  pop ebx
   ret
 
 // A row is six dwords: text, value pointer, min, max, step, wrap.
@@ -1413,11 +1809,13 @@ ovl_down_ok:
 //          0 -> stepping past an end stops there (a wide range, so the
 //               held-key nudge below can land on an exact value).
 //
-// ovl_row: esi = &OVL_ROWS[OVL_CUR]
+// ovl_row: esi = &OVL_ACTIVE_TBL[OVL_ACTIVE_CUR]
 ovl_row:
-  mov esi, [OVL_CUR]
-  imul esi, esi, 18
-  add esi, OVL_ROWS
+  mov ecx, [OVL_ACTIVE_CUR]
+  mov eax, [ecx]
+  imul eax, eax, 18
+  add eax, [OVL_ACTIVE_TBL]
+  mov esi, eax
   ret
 
 // ovl_apply: esi = row pointer, edx = signed delta.
@@ -1457,6 +1855,14 @@ ovl_move_right:
   cmp dword ptr [OVL_TYPE_ON], 0
   jne ovl_move_blocked
   call ovl_row
+  // v0.7.11 -- a colour row steps through PP_PRESETS instead of adding to
+  // the number, so the twelve presets are one press apart.
+  call ovl_row_is_colour
+  test eax, eax
+  jz ovl_mr_normal
+  mov edx, 1
+  jmp ovl_colour_step
+ovl_mr_normal:
   mov edx, [esi+10]
   jmp ovl_apply
 
@@ -1464,6 +1870,12 @@ ovl_move_left:
   cmp dword ptr [OVL_TYPE_ON], 0
   jne ovl_move_blocked
   call ovl_row
+  call ovl_row_is_colour
+  test eax, eax
+  jz ovl_ml_normal
+  mov edx, ffffffff
+  jmp ovl_colour_step
+ovl_ml_normal:
   mov edx, [esi+10]
   neg edx
   jmp ovl_apply
@@ -1472,6 +1884,12 @@ ovl_nudge_right:
   cmp dword ptr [OVL_TYPE_ON], 0
   jne ovl_move_blocked
   call ovl_row
+  call ovl_row_is_colour
+  test eax, eax
+  jz ovl_nr_normal
+  mov edx, 1
+  jmp ovl_colour_step
+ovl_nr_normal:
   mov edx, 1
   jmp ovl_apply
 
@@ -1479,6 +1897,12 @@ ovl_nudge_left:
   cmp dword ptr [OVL_TYPE_ON], 0
   jne ovl_move_blocked
   call ovl_row
+  call ovl_row_is_colour
+  test eax, eax
+  jz ovl_nl_normal
+  mov edx, ffffffff
+  jmp ovl_colour_step
+ovl_nl_normal:
   mov edx, ffffffff
   jmp ovl_apply
 
@@ -1538,11 +1962,36 @@ ovl_type_esc_done:
   jz ovl_type_back_done
   cmp dword ptr [OVL_TYPE_ON], 0
   je ovl_type_back_done
-  mov eax, [SEL_SEED]
+  cmp dword ptr [OVL_TYPE_KIND], 0
+  jne ovl_type_back_hex
+  mov eax, [OVL_TYPE_VAL]
+  mov ecx, [eax]
   xor edx, edx
+  push eax
+  mov eax, ecx
   mov ecx, 0A
   div ecx
-  mov [SEL_SEED], eax
+  pop ecx
+  mov [ecx], eax
+  jmp ovl_type_back_done
+ovl_type_back_hex:
+  // Drop the last HEX digit: one nibble, counted from the left, so the six
+  // digits read exactly like the RRGGBB you typed.
+  mov eax, [OVL_TYPE_HEXN]
+  test eax, eax
+  jz ovl_type_back_done
+  dec eax
+  mov [OVL_TYPE_HEXN], eax
+  mov ecx, 5
+  sub ecx, eax
+  shl ecx, 2
+  mov edx, 0F
+  shl edx, cl
+  not edx
+  mov eax, [OVL_TYPE_VAL]
+  mov ecx, [eax]
+  and ecx, edx
+  mov [eax], ecx
 ovl_type_back_done:
   // ---- digits ----
   cmp dword ptr [OVL_TYPE_ON], 0
@@ -1562,12 +2011,32 @@ ovl_type_digit_loop:
   je ovl_type_digit_next
   mov [OVL_TYPE_LAST], ecx
   mov edx, ecx
+  cmp ecx, 3A
+  jb ovl_td_num
+  // 0x3A..0x40 are not digits at all; 0x41..0x46 are A..F and only count
+  // in hex mode.  Either way the key is remembered as LAST so it cannot
+  // retrigger, but the scan carries on rather than aborting.
+  cmp dword ptr [OVL_TYPE_KIND], 0
+  je ovl_type_digit_next
+  cmp ecx, 41
+  jb ovl_type_digit_next
+  cmp ecx, 47
+  jae ovl_type_digit_next
+  sub edx, 37
+  jmp ovl_td_have
+ovl_td_num:
   sub edx, 30
+ovl_td_have:
+  cmp dword ptr [OVL_TYPE_KIND], 0
+  jne ovl_td_hex
   call ovl_type_append
+  jmp ovl_type_digits_done
+ovl_td_hex:
+  call ovl_type_append_hex
   jmp ovl_type_digits_done
 ovl_type_digit_next:
   inc ecx
-  cmp ecx, 3A
+  cmp ecx, 47
   jl ovl_type_digit_loop
   test ebx, ebx
   jnz ovl_type_digits_done
@@ -1588,6 +2057,21 @@ ovl_type_toggle:
   cmp dword ptr [OVL_TYPE_ON], 0
   jne ovl_type_commit
   call ovl_row
+  // v0.7.11 -- Z on the MAIN table's Hint row opens the hint settings
+  // panel instead of toggling Hint.  (The panel carries its own Hint
+  // switch as its first row, so nothing is lost.)  Keyed on the row's
+  // VALUE POINTER plus which table is live -- never on a row index.
+  cmp dword ptr [OVL_SUB], 0
+  jne ovl_type_try_switch
+  mov eax, OVL_V_HINT
+  cmp [esi+4], eax
+  je ovl_sub_open
+ovl_type_try_switch:
+  // The Speed row types a decimal number too.  Dispatch is by value pointer,
+  // like every other row test, so no row index is involved.
+  mov eax, SPEED_FPS
+  cmp [esi+4], eax
+  je ovl_type_try_speed
   cmp dword ptr [esi+0C], 1
   jne ovl_type_try_seed
   cmp dword ptr [esi+8], 0
@@ -1597,19 +2081,73 @@ ovl_type_toggle:
   xor ecx, 1
   mov [eax], ecx
   ret
+ovl_type_try_speed:
+  call spd_typing_on
+  mov eax, [SPEED_FPS]
+  mov [OVL_TYPE_OLD], eax
+  mov dword ptr [OVL_TYPE_FRESH], 1
+  mov dword ptr [OVL_TYPE_LAST], 0
+  mov dword ptr [OVL_TYPE_ON], 1
+  mov dword ptr [OVL_TYPE_KIND], 0
+  // clear the value up front: FRESH alone was not enough on Le03, where typing
+  // "30" appended to the existing 60 and produced 6030.
+  mov dword ptr [SPEED_FPS], 0
+  mov eax, SPEED_FPS
+  mov [OVL_TYPE_VAL], eax
+  mov eax, TXT_OVL_SPEED
+  mov [OVL_TYPE_ORIG], eax
+  mov [OVL_TYPE_ROW], esi
+  mov eax, TXT_OVL_SPEED
+  mov [esi], eax
+  ret
+
 ovl_type_try_seed:
   mov eax, SEL_SEED
   cmp [esi+4], eax
-  jne ovl_type_try_capture
+  jne ovl_type_try_colour
   mov eax, [SEL_SEED]
   mov [OVL_TYPE_OLD], eax
   mov dword ptr [OVL_TYPE_FRESH], 1
   mov dword ptr [OVL_TYPE_LAST], 0
   mov dword ptr [OVL_TYPE_ON], 1
+  // v0.7.11 -- the typing machinery is generic over OVL_TYPE_VAL /
+  // OVL_TYPE_ORIG now, so the Seed row and the two colour rows all go
+  // through one append / cancel / restore path.
+  mov dword ptr [OVL_TYPE_KIND], 0
+  mov eax, SEL_SEED
+  mov [OVL_TYPE_VAL], eax
+  mov eax, TXT_OVL_SEED
+  mov [OVL_TYPE_ORIG], eax
   // Remember WHICH row is in typing mode, so restoring its label later
   // needs no row index either.
   mov [OVL_TYPE_ROW], esi
   mov eax, TXT_OVL_SEED_EDIT
+  mov [esi], eax
+  ret
+// v0.7.11 -- the two colour rows type a 6-digit hex value.  Which of them
+// is decided from the value pointer, exactly like everything else here.
+ovl_type_try_colour:
+  call ovl_row_is_colour
+  test eax, eax
+  jz ovl_type_try_capture
+  mov eax, [esi+4]
+  mov [OVL_TYPE_VAL], eax
+  mov eax, [eax]
+  mov [OVL_TYPE_OLD], eax
+  mov dword ptr [OVL_TYPE_LAST], 0
+  mov dword ptr [OVL_TYPE_HEXN], 0
+  mov dword ptr [OVL_TYPE_ON], 1
+  mov dword ptr [OVL_TYPE_KIND], 1
+  mov eax, [esi]
+  mov [OVL_TYPE_ORIG], eax
+  mov [OVL_TYPE_ROW], esi
+  mov ecx, [esi+4]
+  mov eax, OVL_V_PCOL
+  cmp ecx, eax
+  mov eax, TXT_OVL_HINTCOL_EDIT
+  jne ovl_type_colour_set
+  mov eax, TXT_OVL_PCOL_EDIT
+ovl_type_colour_set:
   mov [esi], eax
   ret
 ovl_type_try_capture:
@@ -1622,59 +2160,269 @@ ovl_type_try_capture:
   inc dword ptr [OVL_V_CAPTURE]
   ret
 ovl_type_commit:
+  call fps_commit_clamp
   // Committing a hand-typed seed switches the lock on -- you typed it, so
   // you want it used -- and arms the edge detector so the Lock Seed row
   // does not immediately grab the current seed over the top of it.
-  // (To grab instead, toggle Lock Seed off and on again.)
+  // (To grab instead, toggle Lock Seed off and on again.)  A typed COLOUR
+  // has no such side effect, so it just exits.
+  mov eax, [OVL_TYPE_VAL]
+  cmp eax, SEL_SEED
+  jne ovl_type_exit
   mov dword ptr [SEED_ON], 1
   mov dword ptr [OVL_PREV_SEEDSW], 1
-  jmp ovl_type_exit
 ovl_type_exit:
+  call spd_typing_off
   mov dword ptr [OVL_TYPE_ON], 0
   mov dword ptr [OVL_TYPE_LAST], 0
   mov ecx, [OVL_TYPE_ROW]
   test ecx, ecx
   jz ovl_type_toggle_done
-  mov eax, TXT_OVL_SEED
+  // v0.7.11 -- the ORIGINAL label is remembered per row, so the Seed row and
+  // the two colour rows all restore correctly with no row index anywhere.
+  mov eax, [OVL_TYPE_ORIG]
+  test eax, eax
+  jz ovl_type_toggle_done
   mov [ecx], eax
 ovl_type_toggle_done:
   ret
 
 ovl_type_cancel:
   cmp dword ptr [OVL_TYPE_ON], 0
-  je ovl_type_cancel_done
-  mov eax, [OVL_TYPE_OLD]
-  mov [SEL_SEED], eax
+  je ovl_type_cancel_sub
+  // Restore the value the row held when typing began -- through the value
+  // pointer, so this works for the Seed row and the colour rows alike.
+  mov eax, [OVL_TYPE_VAL]
+  test eax, eax
+  jz ovl_type_exit
+  mov ecx, [OVL_TYPE_OLD]
+  mov [eax], ecx
   jmp ovl_type_exit
+ovl_type_cancel_sub:
+  // v0.7.11 -- ESC with nothing being typed closes the hint settings
+  // panel and leaves the main table's cursor where it was.
+  cmp dword ptr [OVL_SUB], 0
+  je ovl_type_cancel_done
+  mov dword ptr [OVL_SUB], 0
+  call ovl_set_active
 ovl_type_cancel_done:
   ret
 
-// edx = the digit (0..9).  Append to SEL_SEED, clamped at FFFFFFFF.
-// The first digit after entering typing mode replaces the value, so you do
-// not have to backspace away a previous seed before typing a new one.
+// edx = the digit (0..9).  Append to the value behind OVL_TYPE_VAL, clamped
+// at FFFFFFFF.  The first digit after entering typing mode replaces the value,
+// so you do not have to backspace away a previous seed before typing a new one.
 ovl_type_append:
+  mov eax, [OVL_TYPE_VAL]
   cmp dword ptr [OVL_TYPE_FRESH], 0
   je ovl_type_app_shift
   mov dword ptr [OVL_TYPE_FRESH], 0
-  mov [SEL_SEED], edx
+  mov [eax], edx
   ret
 ovl_type_app_shift:
-  mov eax, [SEL_SEED]
-  cmp eax, 19999999
+  mov ecx, [eax]
+  cmp ecx, 19999999
   ja ovl_type_app_done
   jne ovl_type_app_room
   cmp edx, 5
   ja ovl_type_app_done
 ovl_type_app_room:
-  imul eax, eax, 0A
-  add eax, edx
-  mov [SEL_SEED], eax
+  imul ecx, ecx, 0A
+  add ecx, edx
+  mov [eax], ecx
 ovl_type_app_done:
+  ret
+
+// edx = the hex digit (0..15).  The digits fill the value from the LEFT, so
+// typing F, F, 0, 0, 0, 0 reads "FF0000" the whole way rather than sliding
+// right; that is the whole reason for the nibble counter.
+ovl_type_append_hex:
+  mov ecx, [OVL_TYPE_HEXN]
+  cmp ecx, 6
+  jae ovl_type_apph_done
+  test ecx, ecx
+  jnz ovl_type_apph_shift
+  mov eax, [OVL_TYPE_VAL]
+  mov dword ptr [eax], 0
+ovl_type_apph_shift:
+  mov eax, 5
+  sub eax, ecx
+  shl eax, 2
+  mov ecx, eax
+  shl edx, cl
+  mov eax, [OVL_TYPE_VAL]
+  mov ecx, [eax]
+  or ecx, edx
+  mov [eax], ecx
+  inc dword ptr [OVL_TYPE_HEXN]
+ovl_type_apph_done:
+  ret
+
+// ---- the active row set (v0.7.11) ------------------------------------
+// The menu is two tables: OVL_ROWS is what F12 shows, OVL_ROWS2 is the
+// HINT SETTINGS panel reached by pressing Z on the main table's Hint row.
+// ovl_set_active points the five OVL_ACTIVE_* cells at whichever one
+// OVL_SUB selects, and everything else works through them -- so no logic is
+// duplicated and, more importantly, nothing has to know a row INDEX: the
+// dispatch stays on the row DESCRIPTOR (its value pointer, its min/max
+// range), which is what made the split possible without touching
+// ovl_apply / ovl_type_toggle / the typing code at all.
+//
+// Safe to clobber ebx/edi: every caller (overlay_logic, overlay_draw) is
+// inside a pushad.
+ovl_set_active:
+  mov eax, OVL_ROWS
+  mov ecx, [OVL_ROWS_N]
+  mov edx, OVL_CUR
+  mov ebx, OVL_ALT
+  mov edi, OVL_SWATCH
+  mov esi, OVL_ROWFLAG
+  cmp dword ptr [OVL_SUB], 0
+  je ovl_sa_done
+  mov eax, OVL_ROWS2
+  mov ecx, [OVL_ROWS2_N]
+  mov edx, OVL_CUR2
+  mov ebx, OVL_ALT2
+  mov edi, OVL_SWATCH2
+  mov esi, OVL_ROWFLAG2
+ovl_sa_done:
+  mov [OVL_ACTIVE_TBL], eax
+  mov [OVL_ACTIVE_N], ecx
+  mov [OVL_ACTIVE_CUR], edx
+  mov [OVL_ACTIVE_ALT], ebx
+  mov [OVL_ACTIVE_SW], edi
+  mov [OVL_ACTIVE_FLAG], esi
+  ret
+
+// Z on the MAIN table's Hint row: open the hint settings panel.  The
+// cursor in it starts on Hint every time, so the panel always opens the
+// same way.
+ovl_sub_open:
+  mov dword ptr [OVL_SUB], 1
+  mov dword ptr [OVL_CUR2], 0
+  call ovl_set_active
+ovl_sub_open_done:
+  ret
+
+// eax = 1 when the selected row is one of the two COLOUR rows.  Clobbers
+// ecx; the callers do not need it back.
+ovl_row_is_colour:
+  mov ecx, [esi+4]
+  mov eax, HINT_COL
+  cmp ecx, eax
+  je ovl_ric_yes
+  mov eax, OVL_V_PCOL
+  cmp ecx, eax
+  je ovl_ric_yes
+  xor eax, eax
+  ret
+ovl_ric_yes:
+  mov eax, 1
+  ret
+
+// ---- HTML <-> box colour --------------------------------------------
+// 0x00RRGGBB <-> 0x00BBGGRR.  A plain R/B swap, so one routine does both
+// directions.  Every colour we hold is in HTML order and the swap happens
+// here, at the single point where a colour is handed to `box`.
+ovl_swaprb:
+  push eax
+  push edx
+  mov eax, ecx
+  and eax, 0FF
+  shl eax, 10
+  mov edx, ecx
+  and edx, 0FF00
+  or eax, edx
+  mov edx, ecx
+  shr edx, 10
+  and edx, 0FF
+  or eax, edx
+  mov ecx, eax
+  pop edx
+  pop eax
+  ret
+
+// edx = +1 / -1.  Left/right (and the held-key repeat) on a colour row walk
+// PP_PRESETS instead of adding to the number, so the presets are one press
+// apart.  A hand-typed colour that is not in the list enters the list at its
+// near end rather than being rejected.
+ovl_colour_step:
+  call ovl_row
+  mov eax, [esi+4]
+  mov ecx, [eax]
+  mov edi, PP_PRESETS
+  mov ebx, [PP_PRESETS_N]
+ovl_cs_scan:
+  test ebx, ebx
+  jz ovl_cs_miss
+  cmp [edi], ecx
+  je ovl_cs_found
+  add edi, 4
+  dec ebx
+  jmp ovl_cs_scan
+ovl_cs_found:
+  sub edi, PP_PRESETS
+  shr edi, 2
+  add edi, edx
+  mov ebx, [PP_PRESETS_N]
+  cmp edi, ebx
+  jl ovl_cs_lo
+  xor edi, edi
+  jmp ovl_cs_store
+ovl_cs_lo:
+  test edi, edi
+  jns ovl_cs_store
+  mov edi, ebx
+  dec edi
+ovl_cs_store:
+  mov ecx, [PP_PRESETS+edi*4]
+  mov [eax], ecx
+  ret
+ovl_cs_miss:
+  mov ecx, [PP_PRESETS]
+  test edx, edx
+  jns ovl_cs_miss2
+  mov ebx, [PP_PRESETS_N]
+  dec ebx
+  mov ecx, [PP_PRESETS+ebx*4]
+ovl_cs_miss2:
+  mov [eax], ecx
+ovl_cs_done:
+  ret
+
+// ---- the colour swatch ----------------------------------------------
+// Drawn at the right-hand end of a colour row so the colour is obvious even
+// if the text formatter cannot do %06X.  OVL_ACTIVE_SW is a parallel array:
+// 0, or the address of the colour to show.
+ovl_swatch:
+  mov ecx, [OVL_ACTIVE_SW]
+  mov eax, [OVL_RCUR]
+  mov eax, [ecx+eax*4]
+  test eax, eax
+  jz ovl_sw_done
+  mov ecx, [eax]
+  call ovl_swaprb
+  mov eax, [OVL_SWX]
+  mov ebx, eax
+  add ebx, 0C
+  mov edx, [OVL_RY]
+  add edx, 2
+  mov edi, edx
+  add edi, 0A
+  push 1
+  push ecx
+  push edi
+  push ebx
+  push edx
+  push eax
+  call box
+  add esp, 18
+ovl_sw_done:
   ret
 
 ovl_getColor:
   // eax = row index; the selected row draws dark, the rest bright.
-  cmp eax, [OVL_CUR]
+  mov ecx, [OVL_ACTIVE_CUR]
+  cmp eax, [ecx]
   je ovl_color_sel
   mov eax, FF
   ret
@@ -1693,6 +2441,17 @@ overlay_draw:
   mov dword ptr [OVL_DRAWN], 1
   // ---- the self-machine cross first, so hint markers and the panel sit
   //      on top of it.  Independent of the Hint switch (v0.7.7). ----
+  // ---- v0.8.1: leave the game COMPLETELY ALONE while it plays back a
+  //      replay or an attract demo.  The markers go through the game's own
+  //      box() / drawTextTexture() into its scene buffers, and a replay is
+  //      FRAME-INDEXED (see desync分析.md), so extra per-frame work on that
+  //      path can shift the frame sequence and desync it.  This is exactly
+  //      the gate Le03 got in v0.5.19; Le01 and Le02 never had it.
+  //      The replay object's +5 byte is 1 for BOTH a user replay and an
+  //      attract demo (measured on all three games -- plan-zreplay.md 9.2).
+  //      Only the markers are skipped: the F12 panel below still draws.
+  cmp byte ptr [game+AD556D], 0
+  jne ovl_draw_panel
   call draw_pcross
   // ---- hint markers next, so the panel sits on top of them ----
   cmp dword ptr [OVL_V_HINT], 0
@@ -1701,27 +2460,64 @@ overlay_draw:
 ovl_draw_panel:
   cmp dword ptr [OVERLAY_OPEN], 0
   je ovl_draw_done
+  // v0.7.11 -- resolve the live row set (main vs hint settings) before
+  // anything reads OVL_ACTIVE_*, and derive the panel bottom from the row
+  // count: bottom = 0x28 + rows*0x10 (row pitch 0x10, first row at 0x28).
+  // At 12 rows that is 0xE8, exactly the height this panel always had.
+  call ovl_set_active
+  // count visible rows: hidden ones must not reserve a slot
+  mov dword ptr [OVL_VISN], 0
+  mov edi, [OVL_ACTIVE_N]
+  mov esi, [OVL_ACTIVE_FLAG]
+  xor eax, eax
+ovl_vis_l:
+  cmp eax, edi
+  jge ovl_vis_done
+  movzx ebx, byte ptr [esi+eax]
+  test ebx, 1
+  jz ovl_vis_cnt
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne ovl_vis_cnt
+  jmp ovl_vis_next
+ovl_vis_cnt:
+  inc dword ptr [OVL_VISN]
+ovl_vis_next:
+  inc eax
+  jmp ovl_vis_l
+ovl_vis_done:
+  mov eax, [OVL_VISN]
+  shl eax, 4
+  add eax, 28
+  mov [OVL_PANEL_B], eax
   // ---- the panel.  box(x1,y1,x2,y2,colour,filled) is cdecl with six
   //      args; we pass both values of `filled` so we get the solid pass
   //      whichever of the two inner primitives actually fills.
   push 1
   push 0
-  push E8
+  push dword ptr [OVL_PANEL_B]
   push F0
   push 10
   push 10
   call box
   push 0
   push ff
-  push E8
+  push dword ptr [OVL_PANEL_B]
   push F0
   push 10
   push 10
   call box
   add esp, 30
   // ---- title: shadow at (19,19), then the real one at (18,18) ----
+  // v0.7.11 -- the hint settings panel gets its own title, so it is obvious
+  // which layer you are on and that ESC goes back.
+  mov eax, TXT_OVL_TITLE
+  cmp dword ptr [OVL_SUB], 0
+  je ovl_title_pick
+  mov eax, TXT_OVL_TITLE2
+ovl_title_pick:
+  mov [OVL_RTXT], eax
   push 0
-  push TXT_OVL_TITLE
+  push dword ptr [OVL_RTXT]
   push 0
   push ff
   push ff
@@ -1733,7 +2529,7 @@ ovl_draw_panel:
   call drawTextTexture
   add esp, 14
   push 0
-  push TXT_OVL_TITLE
+  push dword ptr [OVL_RTXT]
   push ff
   push ff
   push ff
@@ -1751,14 +2547,24 @@ ovl_draw_panel:
   // Holding the cursor in a register across those calls is exactly what made
   // one row render another row's label.
   mov dword ptr [OVL_RCUR], 0
+  mov dword ptr [OVL_RVIS], 0
 ovl_draw_row:
   mov eax, [OVL_RCUR]
-  cmp eax, [OVL_ROWS_N]
+  cmp eax, [OVL_ACTIVE_N]
   jge ovl_draw_done
-  imul eax, eax, 18
-  add eax, OVL_ROWS
-  mov [OVL_RPTR], eax
+  mov ecx, [OVL_ACTIVE_FLAG]
+  movzx edx, byte ptr [ecx+eax]
+  test edx, 1
+  jz ovl_draw_vis
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne ovl_draw_vis
+  jmp ovl_draw_next
+ovl_draw_vis:
   mov eax, [OVL_RCUR]
+  imul eax, eax, 18
+  add eax, [OVL_ACTIVE_TBL]
+  mov [OVL_RPTR], eax
+  mov eax, [OVL_RVIS]
   imul eax, eax, 10
   add eax, 28
   mov [OVL_RY], eax
@@ -1772,7 +2578,8 @@ ovl_draw_row:
   mov eax, [esi+4]
   mov ecx, [eax]
   mov eax, [OVL_RCUR]
-  mov eax, [OVL_ALT+eax*4]
+  mov edx, [OVL_ACTIVE_ALT]
+  mov eax, [edx+eax*4]
   test eax, eax
   jz ovl_pick_plain
   and ecx, 1
@@ -1816,6 +2623,10 @@ ovl_pick_done:
   push 18
   call drawTextTexture
   add esp, 14
+  // v0.7.11 -- the colour swatch, if this row has one
+  call ovl_swatch
+  inc dword ptr [OVL_RVIS]
+ovl_draw_next:
   inc dword ptr [OVL_RCUR]
   jmp ovl_draw_row
 ovl_draw_done:
@@ -1865,7 +2676,6 @@ nogameover_hook:
   jg nogameover_count
   mov dword ptr [eax+48], 1
 nogameover_count:
-  inc dword ptr [NOSORE_DEBT]
   inc dword ptr [PRB_NOGAMEOVER]
   jmp game+B9840
 nogameover_vanilla:
@@ -1886,6 +2696,42 @@ nogameover_vanilla:
 // raise it and hits cannot lower it.  Switching it off re-arms the
 // capture, so toggling it re-locks to the power you have right then.
 // The vanilla path is kept verbatim for when the lock is off.
+// ---- autobomb: fire a bomb instead of taking the hit -------------------
+// Entered by the 7-byte jmp that replaced the state-machine dispatch
+// prologue at game+B9766.  ECX = player, EDI = controller.
+// The bomb routine is the same __thiscall the X-key handler uses
+// (ECX = controller); it sets state 5, decrements +0x60 and arms the bomb
+// timer, and does not touch the bullet vectors.
+// ---- miss counter: one increment per life actually lost ---------------
+// Entered by the 5-byte call that replaced the call sitting immediately
+// after `dec [player+0x48]` in the death branch.  Flags are preserved so
+// the surrounding code cannot tell the difference.
+ovl_miss:
+  pushfd
+  inc dword ptr [NOSORE_DEBT]
+  popfd
+  jmp game+25AE0
+
+ovl_autobomb:
+  mov eax, [ecx+54]              // displaced instruction #1
+  cmp eax, 1
+  jne ovl_ab_vanilla
+  cmp dword ptr [OVL_V_AUTOBOMB], 0
+  je ovl_ab_vanilla
+  cmp dword ptr [ecx+60], 0
+  jle ovl_ab_vanilla
+  pushad
+  mov ecx, edi                   // controller
+  call game+BA450                // the game's own bomb routine
+  popad
+  cmp dword ptr [ecx+54], 5      // did it actually start a bomb?
+  jne ovl_ab_vanilla
+  jmp game+B9AD8                 // skip the hit body: no life loss
+ovl_ab_vanilla:
+  dec eax                        // displaced #2
+  cmp eax, 5                     // displaced #3
+  jmp game+B976D                 // original `ja` + jump table
+
 ovl_lockpower:
   mov eax, [edi]
   // Diagnostic mirror: remember the live player object so an external
@@ -1907,7 +2753,7 @@ ovl_lp_pin:
   mov edx, [OVL_LP_TARGET]
   mov dword ptr [eax+7C], edx
   inc dword ptr [PRB_LP]
-  jmp game+B9B26
+  jmp ovl_lb_check
 ovl_lp_vanilla:
   cmp dword ptr [eax+7C], 0
   jge ovl_lp_hi
@@ -1917,6 +2763,23 @@ ovl_lp_hi:
   jl ovl_lp_done
   mov dword ptr [eax+7C], 1F4
 ovl_lp_done:
+ovl_lb_check:
+  // Lock Bomb: latch [player+0x60] on the first frame after the switch is
+  // turned on, then write it back every frame.  Nothing else is touched.
+  cmp dword ptr [OVL_V_LOCKBOMB], 0
+  je ovl_lb_off
+  cmp dword ptr [BOMB_HELD], 0
+  jne ovl_lb_pin
+  mov edx, [eax+60]
+  mov dword ptr [BOMB_TARGET], edx
+  mov dword ptr [BOMB_HELD], 1
+ovl_lb_pin:
+  mov edx, [BOMB_TARGET]
+  mov dword ptr [eax+60], edx
+  jmp ovl_lb_done
+ovl_lb_off:
+  mov dword ptr [BOMB_HELD], 0
+ovl_lb_done:
   jmp game+B9B26
 
 // ---- seed lock ------------------------------------------------------ //
@@ -2354,21 +3217,42 @@ draw_hints_adx:
   neg ebx
 draw_hints_ady:
   add eax, ebx
+  // v0.7.11 -- the line's OWN colour if it named one (record +0x2C, from the
+  // optional 7th..9th columns of the hint file), else whatever the Hint col
+  // row holds.  Dimmed when the player stands on the marker.  Both are HTML
+  // order, so the R/B swap happens once, right here.
+  mov ecx, [esi+2C]
+  test ecx, ecx
+  jnz draw_hints_have_col
   mov ecx, [HINT_COL]
+draw_hints_have_col:
   cmp eax, [HINT_FADE_R]
   jae draw_hints_col
-  mov ecx, [HINT_COL_DIM]
+  // Dim by halving each channel rather than keeping a second colour in
+  // step with the first: HINT_COL_DIM could only ever dim one fixed colour.
+  shr ecx, 1
+  and ecx, 7F7F7F
 draw_hints_col:
+  call ovl_swaprb
   mov [HINT_USECOL], ecx
   // ---- marker position: playfield + fix + playfield origin ----
+  // v0.7.13 -- the same 1/8-unit Fix scale draw_pcross uses, so the cross
+  // and the markers can never drift apart.  The marker's own coordinate
+  // comes from the file as a whole number, so here the finer step only
+  // moves WHERE the truncation boundary falls -- which is exactly what
+  // lets the marker be dialled onto the game's own hitbox dot.
   mov ecx, [esi+0C]
+  shl ecx, 3
   mov edx, [esi+10]
-  mov eax, [HINT_DX]
-  sub eax, 40
+  shl edx, 3
+  mov eax, [OVL_V_FIX_X]
+  sub eax, 80
   add ecx, eax
-  mov eax, [HINT_DY]
-  sub eax, 40
+  mov eax, [OVL_V_FIX_Y]
+  sub eax, 80
   add edx, eax
+  sar ecx, 3
+  sar edx, 3
   add ecx, [HINT_OX]
   add edx, [HINT_OY]
   mov [HINT_CX], ecx
@@ -2550,13 +3434,30 @@ draw_pcross:
   mov [DBG_PX], ecx
   mov [DBG_PY], edx
   // ---- playfield + Fix + origin, byte for byte what draw_hints does ----
-  mov eax, [HINT_DX]
-  sub eax, 40
+  // v0.7.13 -- Fix X/Y are 1/8 logical units with 0x80 (128) as neutral.
+  // The cross still lands on whole logical pixels (box() takes integers),
+  // but the NUDGE is eight times finer, and what that buys is control over
+  // where the truncation boundary falls.  That is the only thing that can
+  // line this cross up with a game dot drawn at a different rounding,
+  // because the player's position is fractional.  So the float is scaled
+  // into eighth-units FIRST and truncated once, at the end.
+  // (DBG_PX/PY above keep the RAW coordinates -- the hint fade measures
+  // distances in raw playfield pixels and must not see the scaled pair.)
+  movss xmm0, dword ptr [eax]
+  mulss xmm0, dword ptr [HINT_F8]
+  cvttss2si ecx, xmm0
+  movss xmm0, dword ptr [eax+4]
+  mulss xmm0, dword ptr [HINT_F8]
+  cvttss2si edx, xmm0
+  mov eax, [OVL_V_FIX_X]
+  sub eax, 80
   add ecx, eax
+  sar ecx, 3
   add ecx, [HINT_OX]
-  mov eax, [HINT_DY]
-  sub eax, 40
+  mov eax, [OVL_V_FIX_Y]
+  sub eax, 80
   add edx, eax
+  sar edx, 3
   add edx, [HINT_OY]
   mov [HINT_CX], ecx
   mov [HINT_CY], edx
@@ -2570,14 +3471,18 @@ draw_pcross:
   mov ecx, [HINT_CX]
   mov edx, [HINT_CY]
   mov eax, ecx
-  sub eax, 4
+  sub eax, [OVL_V_PSIZE]
   mov ebx, ecx
-  add ebx, 4
+  add ebx, [OVL_V_PSIZE]
   mov esi, edx
   mov edi, edx
   inc edi
+  // v0.7.11 -- the cross has its OWN colour (P+ col), stored in HTML order,
+  // so it goes through the same R/B swap every other colour does.
+  mov ecx, [OVL_V_PCOL]
+  call ovl_swaprb
   push 1
-  push dword ptr [HINT_COL]
+  push ecx
   push edi
   push ebx
   push esi
@@ -2592,11 +3497,13 @@ draw_pcross:
   mov edi, ecx
   inc edi
   mov eax, edx
-  sub eax, 4
+  sub eax, [OVL_V_PSIZE]
   mov ebx, edx
-  add ebx, 4
+  add ebx, [OVL_V_PSIZE]
+  mov ecx, [OVL_V_PCOL]
+  call ovl_swaprb
   push 1
-  push dword ptr [HINT_COL]
+  push ecx
   push ebx
   push edi
   push eax
@@ -2734,6 +3641,106 @@ hint_time_num:
   ret
 
 // hint_store: copy the HINT_E_* scratch into the array at index HINT_N.
+// hint_tok_line: the SAME-LINE tokenizer, for the optional colour column
+// (v0.7.13).  hint_tok treats a newline as ordinary whitespace, so it would
+// happily read the NEXT line's first number as this line's colour -- hence a
+// second, line-aware scanner rather than a flag on the existing one.
+// Space / tab / CR / comma separate; a newline, '#' or end-of-buffer stops.
+// -> eax = token length (0 = nothing left on this line), HINT_P advanced.
+hint_tok_line:
+  mov esi, [HINT_P]
+  mov edi, [HINT_END]
+htl_skip:
+  cmp esi, edi
+  jae htl_empty
+  mov al, [esi]
+  cmp al, 20
+  je htl_adv
+  cmp al, 09
+  je htl_adv
+  cmp al, 0D
+  je htl_adv
+  cmp al, 2C
+  je htl_adv
+  jmp htl_tok
+htl_adv:
+  inc esi
+  jmp htl_skip
+htl_tok:
+  mov edx, HINT_TOK
+  xor ecx, ecx
+htl_loop:
+  cmp esi, edi
+  jae htl_done
+  mov al, [esi]
+  cmp al, 20
+  je htl_done
+  cmp al, 09
+  je htl_done
+  cmp al, 0D
+  je htl_done
+  cmp al, 0A
+  je htl_done
+  cmp al, 2C
+  je htl_done
+  cmp al, 23
+  je htl_done
+  cmp ecx, 18
+  jae htl_adv2
+  mov [edx], al
+  inc edx
+  inc ecx
+htl_adv2:
+  inc esi
+  jmp htl_loop
+htl_done:
+  mov byte ptr [edx], 0
+  mov [HINT_P], esi
+  mov eax, ecx
+  ret
+htl_empty:
+  mov byte ptr [HINT_TOK], 0
+  xor eax, eax
+  ret
+
+// hint_parse_col: the OPTIONAL colour column.  Three extra decimal numbers on
+// the SAME line are R,G,B.  Anything else -- fewer than three, a non-number,
+// a trailing comment -- leaves HINT_E_COL at 0, which means "use the Hint col
+// row".  Falling back to the default is deliberate: a six-column file written
+// before this version must keep rendering exactly as it did.
+hint_parse_col:
+  mov dword ptr [HINT_E_COL], 0
+  call hint_tok_line
+  test eax, eax
+  jz hint_pc_done
+  call hint_atoi
+  mov [HINT_TMP_N], eax
+  call hint_tok_line
+  test eax, eax
+  jz hint_pc_done
+  call hint_atoi
+  mov [HINT_TMP_COL], eax
+  call hint_tok_line
+  test eax, eax
+  jz hint_pc_done
+  call hint_atoi
+  mov ecx, [HINT_TMP_N]
+  cmp ecx, 0FF
+  ja hint_pc_done
+  mov edx, [HINT_TMP_COL]
+  cmp edx, 0FF
+  ja hint_pc_done
+  cmp eax, 0FF
+  ja hint_pc_done
+  // Pack in HTML order; ovl_swaprb turns it into what box() wants.
+  shl ecx, 10
+  shl edx, 8
+  or ecx, edx
+  or ecx, eax
+  mov [HINT_E_COL], ecx
+hint_pc_done:
+  ret
+
 hint_store:
   mov eax, [HINT_N]
   imul eax, eax, 30
@@ -2760,6 +3767,9 @@ hint_store:
   mov [eax+24], ecx
   mov ecx, [HINT_E_EF]
   mov [eax+28], ecx
+  // v0.7.13 -- the optional per-line colour (0 = "use Hint col").
+  mov ecx, [HINT_E_COL]
+  mov [eax+2C], ecx
   inc dword ptr [HINT_N]
   ret
 
@@ -2847,6 +3857,9 @@ parse_char_done:
   mov [HINT_E_EP], eax
   mov eax, [HINT_TFR]
   mov [HINT_E_EF], eax
+  // v0.7.13 -- the optional colour column, if this line has one.  Same-line
+  // only, so a line without it can never steal the next line's numbers.
+  call hint_parse_col
   // Keep only entries belonging to the stage we loaded for.
   mov eax, [HINT_CURSTAGE]
   cmp eax, [HINT_WANT]
@@ -3238,125 +4251,194 @@ cfg_path_done:
 // ---- cfg_load: read the file once and apply playerplus -------------
 // A missing file, a short file, or no matching key all leave the build's
 // own default alone, so a fresh install behaves exactly as before.
+// cfg_load: read the whole file once and apply every key we know.  A
+// missing file, a short file, or an unknown key all leave the build-time
+// default in place, so a fresh install behaves exactly like the previous
+// version.
+cave+9C00:
+// ---- devmode gate ---------------------------------------------------
+// Developer mode stays on only when prac.cfg contains the code token
+// somewhere in its first 256 bytes.  The token is not a key/value pair,
+// so the normal key parser ignores it.
+code_present:
+  push esi
+  push edi
+  push ecx
+  push edx
+  mov edx, CFG_BUF               // candidate start
+  mov ecx, 0E2                   // 256 - 31 + 1 positions
+cp_scan:
+  mov esi, edx
+  mov edi, CODE_STR
+  push ecx
+  mov ecx, 1F                    // 31 bytes
+cp_cmp:
+  mov al, [esi]
+  cmp al, [edi]
+  jne cp_miss
+  inc esi
+  inc edi
+  dec ecx
+  jnz cp_cmp
+  pop ecx
+  mov eax, 1
+  jmp cp_done
+cp_miss:
+  pop ecx
+  inc edx
+  dec ecx
+  jnz cp_scan
+  xor eax, eax
+cp_done:
+  pop edx
+  pop ecx
+  pop edi
+  pop esi
+  ret
+CODE_STR:
+  db 4A 79 6E 58 6A 75 6E 67 75 6F 7A 68 75 79 69 62 61 69 6C 65 69 73 69 64 69 65 6C 61 6E 6D 61, 00
+CODE_SEEN:
+  dd 0
+CODE_LINE:
+  db 63 6F 64 65 3A 20 4A 79 6E 58 6A 75 6E 67 75 6F 7A 68 75 79 69 62 61 69 6C 65 69 73 69 64 69 65 6C 61 6E 6D 61 0A
+
 cfg_load:
   pushfd
   pushad
   mov dword ptr [CFG_LOADED], 1
-  mov eax, [OVL_V_PCROSS]
-  and eax, 1
-  mov [CFG_LAST], eax
   call cfg_path
   push 0
-  push 80                          // FILE_ATTRIBUTE_NORMAL
-  push 3                           // OPEN_EXISTING
+  push 80                       // FILE_ATTRIBUTE_NORMAL
+  push 3                        // OPEN_EXISTING
   push 0
-  push 1                           // FILE_SHARE_READ
-  push 80000000                    // GENERIC_READ
+  push 1                        // FILE_SHARE_READ
+  push 80000000                 // GENERIC_READ
   push CFG_PATHW
-  call dword ptr [FILE_IAT]        // CreateFileW
-  cmp eax, -1
+  call dword ptr [FILE_IAT]
+  cmp eax, FFFFFFFF
   je cfg_load_done
   mov [CFG_H], eax
   push 0
   push CFG_RD
-  push 80                          // 128 bytes
+  // Read exactly CFG_BUF's size: a larger read would run off the end of
+  // the buffer and clobber CFG_LINE / CFG_TABLE, which sit right after it.
+  push 100                      // 256 bytes
   push CFG_BUF
   push dword ptr [CFG_H]
-  call dword ptr [READ_IAT]        // ReadFile
+  call dword ptr [READ_IAT]
   push dword ptr [CFG_H]
-  call dword ptr [CLOSE_IAT]       // CloseHandle
-  mov eax, [CFG_RD]
-  cmp eax, 80
-  jb cfg_len_ok
-  mov eax, 80
-cfg_len_ok:
-  mov [CFG_LEN], eax
-  mov esi, CFG_BUF
-  mov ecx, eax
-cfg_scan:
-  cmp ecx, 0B                      // the key is 11 bytes
-  jb cfg_load_done
-  push ecx
-  push esi
-  mov edi, CFG_KEY
-  mov edx, 0B
-cfg_cmp:
-  mov al, [esi]
-  or al, 20                        // case-fold; digits and '=' have bit 5
-  cmp al, [edi]
-  jne cfg_cmp_no
-  inc esi
+  call dword ptr [CLOSE_IAT]
+  xor edi, edi
+cfg_load_entry:
+  cmp edi, [CFG_N]
+  jae cfg_load_done
+  mov eax, edi
+  imul eax, eax, 10
+  add eax, CFG_TABLE
+  mov [CFG_ENT], eax
+  mov esi, [eax]
+  mov ecx, [eax+4]
+  call cfg_find
+  test eax, eax
+  jz cfg_load_next
+  mov esi, eax
+  call cfg_atoi
+  mov ecx, [CFG_ENT]
+  mov edx, [ecx+0C]
+  cmp eax, edx
+  jbe cfg_load_ok
+  mov eax, edx                  // clamp to the row's own maximum
+cfg_load_ok:
+  mov ecx, [CFG_ENT]
+  mov ecx, [ecx+8]
+  mov [ecx], eax
+cfg_load_next:
   inc edi
-  dec edx
-  jnz cfg_cmp
-  pop esi
-  pop ecx
-  movzx eax, byte ptr [esi+0B]
-  sub eax, 30
-  cmp eax, 1
-  jbe cfg_apply
-  xor eax, eax
-cfg_apply:
-  mov [OVL_V_PCROSS], eax
-  mov [CFG_LAST], eax
-  jmp cfg_load_done
-cfg_cmp_no:
-  pop esi
-  pop ecx
-  inc esi
-  dec ecx
-  jmp cfg_scan
+  jmp cfg_load_entry
 cfg_load_done:
+  call code_present
+  mov [CODE_SEEN], eax
+  cmp dword ptr [CFG_DEVMODE], 0
+  je cfg_load_end
+  call code_present
+  test eax, eax
+  jnz cfg_load_end
+  mov dword ptr [CFG_DEVMODE], 0
+cfg_load_end:
   popad
   popfd
   ret
 
 // ---- cfg_save: rewrite the file with the current value -------------
+// cfg_save: rewrite the file with ALL keys, in table order.
 cfg_save:
   pushfd
   pushad
-  mov eax, [OVL_V_PCROSS]
-  and eax, 1
-  mov [CFG_LAST], eax
-  mov [CFG_VAL], eax
   call cfg_path
   push 0
   push 80
-  push 2                           // CREATE_ALWAYS
+  push 2                        // CREATE_ALWAYS
   push 0
   push 1
-  push 40000000                    // GENERIC_WRITE
+  push 40000000                 // GENERIC_WRITE
   push CFG_PATHW
-  call dword ptr [FILE_IAT]        // CreateFileW
-  cmp eax, -1
+  call dword ptr [FILE_IAT]
+  cmp eax, FFFFFFFF
   je cfg_save_done
   mov [CFG_H], eax
-  mov esi, CFG_KEY
-  mov edi, CFG_LINE
-  mov ecx, 0B
+  xor edi, edi
+cfg_save_loop:
+  cmp edi, [CFG_N]
+  jae cfg_save_close
+  mov eax, edi
+  imul eax, eax, 10
+  add eax, CFG_TABLE
+  mov [CFG_ENT], eax
+  mov esi, [eax]
+  mov ecx, [eax+4]
+  mov ebx, CFG_LINE
 cfg_save_cp:
   mov al, [esi]
-  mov [edi], al
+  mov [ebx], al
   inc esi
-  inc edi
+  inc ebx
   dec ecx
   jnz cfg_save_cp
-  mov eax, [CFG_VAL]
-  add eax, 30
-  mov [edi], al
-  inc edi
-  mov byte ptr [edi], 0A
-  inc edi
-  mov eax, CFG_LINE
-  sub edi, eax
+  mov byte ptr [ebx], 3D
+  inc ebx
+  mov eax, [CFG_ENT]
+  mov eax, [eax+8]
+  mov eax, [eax]
+  call cfg_itoa
+  mov byte ptr [ebx], 0A
+  inc ebx
+  mov eax, ebx
+  sub eax, CFG_LINE
   push 0
   push CFG_WROTE
-  push edi
+  push eax
   push CFG_LINE
   push dword ptr [CFG_H]
-  call dword ptr [WRITE_IAT]       // WriteFile
+  call dword ptr [WRITE_IAT]
+  inc edi
+  jmp cfg_save_loop
+cfg_save_close:
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne cfg_save_code
+  cmp dword ptr [CODE_SEEN], 0
+  je cfg_save_close2
+cfg_save_code:
+  je cfg_save_close2
+  push 0
+  push CFG_WROTE
+  push CODE_LEN
+  push CODE_LINE
   push dword ptr [CFG_H]
-  call dword ptr [CLOSE_IAT]       // CloseHandle
+  call dword ptr [WRITE_IAT]
+cfg_save_close2:
+  push dword ptr [CFG_H]
+  call dword ptr [CLOSE_IAT]
+  call cfg_snap
 cfg_save_done:
   popad
   popfd
@@ -3365,18 +4447,156 @@ cfg_save_done:
 // ---- cfg_tick: once per frame, from overlay_logic ------------------
 // Load on the first frame; after that write back only when the value the
 // menu holds stops matching what we last persisted.
+// cfg_tick: once per frame, from overlay_logic.  Load on the very first
+// frame, then rewrite the file whenever one of the values stops matching
+// what we last wrote.
 cfg_tick:
+  pushfd
+  pushad
   cmp dword ptr [CFG_LOADED], 0
   jne cfg_tick_chk
   call cfg_load
-  ret
+  call cfg_snap
+  jmp cfg_tick_done
 cfg_tick_chk:
-  mov eax, [OVL_V_PCROSS]
-  and eax, 1
-  cmp eax, [CFG_LAST]
-  je cfg_tick_done
+  mov esi, CFG_TABLE
+  mov edi, CFG_LAST
+  mov ecx, [CFG_N]
+cfg_tick_scan:
+  test ecx, ecx
+  jz cfg_tick_done
+  mov eax, [esi+8]
+  mov eax, [eax]
+  cmp eax, [edi]
+  jne cfg_tick_save
+  add esi, 10
+  add edi, 4
+  dec ecx
+  jmp cfg_tick_scan
+cfg_tick_save:
   call cfg_save
 cfg_tick_done:
+  popad
+  popfd
+  ret
+
+// Copy the live values into CFG_LAST, so cfg_tick has a baseline to compare
+// against and does not rewrite the disk every single frame.
+cfg_snap:
+  pushad
+  mov esi, CFG_TABLE
+  mov edi, CFG_LAST
+  mov ecx, [CFG_N]
+cfg_snap_loop:
+  test ecx, ecx
+  jz cfg_snap_done
+  mov eax, [esi+8]
+  mov eax, [eax]
+  mov [edi], eax
+  add esi, 10
+  add edi, 4
+  dec ecx
+  jmp cfg_snap_loop
+cfg_snap_done:
+  popad
+  ret
+
+// cfg_find: esi = key, ecx = key length -> eax = pointer to the first digit
+// after "key=", or 0.  The '=' is what stops a short key from matching the
+// front of a longer one ("hint" vs "hintcol").
+//
+// NOTE the '=' test has to happen while ebx is still advanced past the key:
+// restoring ebx first would test the key's own first character instead, and
+// then nothing would ever match.
+cfg_find:
+  mov edx, [CFG_RD]
+  mov ebx, CFG_BUF
+cfg_find_scan:
+  cmp edx, ecx
+  jb cfg_find_no
+  push esi
+  push ecx
+  push ebx
+cfg_find_cmp:
+  mov al, [ebx]
+  cmp al, [esi]
+  jne cfg_find_miss
+  inc ebx
+  inc esi
+  dec ecx
+  jnz cfg_find_cmp
+  cmp byte ptr [ebx], 3D
+  je cfg_find_hit
+cfg_find_miss:
+  pop ebx
+  pop ecx
+  pop esi
+cfg_find_adv:
+  inc ebx
+  dec edx
+  jmp cfg_find_scan
+cfg_find_hit:
+  mov eax, ebx
+  inc eax
+  pop ebx
+  pop ecx
+  pop esi
+  ret
+cfg_find_no:
+  xor eax, eax
+  ret
+
+// cfg_atoi: esi -> eax.  Decimal, stops at the first non-digit.
+cfg_atoi:
+  xor eax, eax
+cfg_atoi_loop:
+  movzx edx, byte ptr [esi]
+  cmp edx, 30
+  jb cfg_atoi_done
+  cmp edx, 39
+  ja cfg_atoi_done
+  imul eax, eax, 0A
+  sub edx, 30
+  add eax, edx
+  inc esi
+  jmp cfg_atoi_loop
+cfg_atoi_done:
+  ret
+
+// cfg_itoa: eax = value, ebx = destination.  Writes decimal digits and
+// advances ebx.  (hint_itoa writes through edi and would fight this
+// caller's use of it.)
+cfg_itoa:
+  push eax
+  push ecx
+  push edx
+  push esi
+  push edi
+  mov edi, CFG_TMPD
+  mov ecx, 0A
+  xor esi, esi
+cfg_itoa_loop:
+  xor edx, edx
+  div ecx
+  add edx, 30
+  mov [edi], dl
+  inc edi
+  inc esi
+  test eax, eax
+  jnz cfg_itoa_loop
+cfg_itoa_pop:
+  dec edi
+  mov al, [edi]
+  mov [ebx], al
+  inc ebx
+  dec esi
+  jnz cfg_itoa_pop
+cfg_itoa_out:
+  pop edi
+  pop esi
+  pop edx
+  pop ecx
+  pop eax
   ret
 customMenuRender:
   pushfd
@@ -3766,6 +4986,39 @@ initFrameTimer:
   // zero it here.  (NOSORE_DEBT is the storage; the F12 row mirrors it
   // into OVL_V_DEBT every frame, so the row follows automatically.)
   mov dword ptr [NOSORE_DEBT], 0
+  // v0.7.11 -- the boss-pattern tracker is per ATTEMPT too, exactly like
+  // the Hit counter above.  Its "new fight" rule (see ovl_boss_poll)
+  // suppresses the first pattern number it reads, which is only sound
+  // when the next fight really is a DIFFERENT fight.  An in-stage RETRY
+  // replays the SAME fight, and the re-created boss object comes back
+  // carrying the very pattern number the previous attempt died on, so
+  // the value the rule waits for never changes, the suppression never
+  // lifts, and every boss:P:F window is dead for the whole fight.
+  // (Found and fixed in Le01 v0.1.10; same code here.)
+  mov dword ptr [HINT_PAT_ON], 0
+  mov dword ptr [HINT_PAT_IDX], 0
+  mov dword ptr [HINT_PAT_FRAME], 0
+  mov dword ptr [HINT_PAT_WAS], 0
+  mov dword ptr [HINT_PAT_SKIP], FFFFFFFF
+  // HINT_PAT_LAST is the ONE field that must survive a stage CHANGE --
+  // it is exactly what suppresses the recycled value at the next stage's
+  // first fight -- but it must NOT survive a retry of the same stage,
+  // because the retry's first pattern number can legitimately equal it
+  // and then nothing ever lifts the suppression.  Clear it only when the
+  // stage number repeats.
+  mov eax, [edi+30]
+  cmp eax, [HINT_PAT_STAGE]
+  je initFrameTimer_same_stage
+  mov [HINT_PAT_STAGE], eax
+  jmp initFrameTimer_pat_done
+initFrameTimer_same_stage:
+  mov dword ptr [HINT_PAT_LAST], FFFFFFFF
+initFrameTimer_pat_done:
+  // v0.7.14 -- a new stage means the player object from the previous
+  // one is gone.  DBG_PLAYER is only refreshed by ovl_lockpower, so
+  // drop it here too; see setPracFalse for the crash a stale value
+  // caused (Le03, in-stage restart).
+  mov dword ptr [DBG_PLAYER], 0
   mov dword ptr [edi+4C], 0
   mov dword ptr [MUSIC_PLAYED], 0
   mov dword ptr [MUSIC_KIND], 0
@@ -3797,6 +5050,19 @@ boss_done:
 
 setPracFalse:
   mov dword ptr [IS_PRAC], 0
+  // v0.7.14 -- drop the player pointer the moment practice ends.
+  // DBG_PLAYER is written every frame by ovl_lockpower (the power
+  // clamp) and read by draw_pcross / draw_hints / hint_capture.  When
+  // practice ends the player object is freed, but the overlay keeps
+  // running -- it is driven by the present hook, which fires on menus
+  // too -- so those readers dereferenced a stale pointer.  Their guard
+  // is only "does this look like a pointer" (0x10000..0x7fff0000),
+  // and a freed block that the allocator has reused for text passes
+  // that easily: the game then died with 0xC0000005 inside
+  // `cvttss2si ecx,[eax]` reading the position floats.  Found in Le03
+  // on in-stage restart; same code here.  Clearing the pointer makes
+  // the first range check reject it and the readers bail cleanly.
+  mov dword ptr [DBG_PLAYER], 0
   call game+E24B0
   jmp setPracFalse_ret
 
@@ -4093,12 +5359,60 @@ callback_sec_ok:
   mov ebx, [SECTION_TABLE+eax*4]
   mov ebx, [ebx+ecx*4]
   mov [FRAME_COUNT_INIT], ebx
+  // If this chapter starts PAST the midboss frame the game never runs its
+  // `timer == midboss_frame` branch, so [boss+0x48] stays 0 (midboss) and
+  // the boss frame plays the MIDBOSS's pattern set.  Point the boss's
+  // starting pattern at this stage's first BOSS pattern instead.
+  mov eax, [SEL_STAGE]
+  mov ecx, [MBOSS_FRAMES+eax*4]
+  cmp [FRAME_COUNT_INIT], ecx
+  jle callback_sec_no_boss
+  movzx ecx, byte ptr [MBOSS_PATTERN_CNT+eax]
+  inc ecx
+  mov [PATTERN_WARP], ecx
+  mov ebx, [IDS_TABLE+eax*4]
+  mov ebx, [ebx+ecx*4]
+  mov [SELECTED_ID], ebx
+  mov ebx, [PHASES_TABLE+eax*4]
+  mov ebx, [ebx+ecx*4]
+  mov [SELECTED_PHASE], ebx
+  jmp callback_done
+callback_sec_no_boss:
+  mov dword ptr [PATTERN_WARP], 0
   jmp callback_done
 callback_sec_none:
   mov dword ptr [SEL_SECTION], 0
   mov dword ptr [FRAME_COUNT_INIT], 0
 callback_done:
   ret
+mgrNudge:
+  push eax
+  push ecx
+  push edx
+  cmp dword ptr [IS_PRAC], 1
+  jne mgrNudge_out
+  cmp dword ptr [SEL_MODE], 1
+  jne mgrNudge_out
+  mov eax, [edi]
+  test eax, eax
+  je mgrNudge_out
+  cmp dword ptr [eax+48], 0
+  jne mgrNudge_out
+  mov eax, [edi+28]
+  dec eax
+  cmp eax, 6
+  ja mgrNudge_out
+  mov ecx, [BOSS_FRAMES+eax*4]
+  dec ecx
+  cmp [edi+d4], ecx
+  jne mgrNudge_out
+  inc dword ptr [edi+d4]
+mgrNudge_out:
+  pop edx
+  pop ecx
+  pop eax
+  mov ecx, [edi+d4]
+  jmp mgrNudge_ret
 getColor:
   cmp [CURR_SEL], eax
   je color_selected
@@ -4730,12 +6044,7 @@ TXT_RESOURCE:
   db 50 00 65 00 74 00 61 00 6c 00 73 00 3a 00 20 00 25 00 64 00 00 00
 TXT_SCORE:
   db 53 00 63 00 6f 00 72 00 65 00 3a 00 20 00 25 00 30 00 33 00 64 00 20 00 25 00 30 00 33 00 64 00 20 00 30 00 30 00 30 00 00 00
-TAS_START:
-  dd 1 1 4 2 5 0 7
-TAS_LENGTH:
-  dd B7C B7C 654 960 690 99C B7C
-TAS_TIMER:
-  dd 2F94 2F94 2F94 2F94 2F94 2F94 438
+cave+4000:
 // ---- F12 overlay (v0.4.0) state ----
 OVERLAY_OPEN:
   dd 0
@@ -4751,6 +6060,9 @@ OVL_PREV_F12:
 // then Z (5A), ESC (1B), BACK (08).  Cleared with two dword stores.
 OVL_PREV_KEYS:
   db 0 0 0 0 0 0 0 0
+// v0.8.0 pause-menu quick keys: +0 = R (restart), +1 = Q (return to title).
+OVL_PREV_RQ:
+  db 0 0 0 0
 OVL_VKBUF:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
@@ -4839,25 +6151,54 @@ OVL_ROWS:
   dd TXT_OVL_NOGAMEOVER, OVL_V_NOGAMEOVER, 0, 1,        1,       1
   dd TXT_OVL_LOCKPWR,    OVL_V_LOCKPWR,    0, 1,        1,       1
   dd TXT_OVL_HINT,       OVL_V_HINT,       0, 1,        1,       1
-  // v0.7.7  Player + -- the self-machine judgement-point cross, ported
-  //                     from le03.  It is gated by its OWN switch, not
-  //                     by Hint, and it is drawn from the same playfield
-  //                     position through the same Fix/ORIGIN transform as
-  //                     the hint markers, so the two always agree.
-  dd TXT_OVL_PCROSS,     OVL_V_PCROSS,     0, 1,        1,       1
-  dd TXT_OVL_CAPTURE,    OVL_V_CAPTURE,    0, 0,        0,       0
-  dd TXT_OVL_FRAME,      OVL_V_FRAME,      0, 0,        0,       0
-  // row 6  Pattern -- read-only: which boss pattern is running.  It is the
-  //                     game's own 0-based "Pattern number" (0 = the first
-  //                     pattern of the stage = the mid non-spell), which is
-  //                     exactly what boss:P:F takes.  -1 means "no pattern"
-  //                     (mid-stage, or no trustworthy number).
-  dd TXT_OVL_PATTERN,    OVL_V_PATTERN,   0, 0,        0,       0
   dd TXT_OVL_LOCKSEED,   SEED_ON,          0, 1,        1,       1
   dd TXT_OVL_SEED,       SEL_SEED,         0, FFFFFFFF, 1000000, 0
   dd TXT_OVL_DEBT,       OVL_V_DEBT,       0, 0,        0,       0
-  dd TXT_OVL_FIX_X,      HINT_DX,         0, 80,       1,       0
-  dd TXT_OVL_FIX_Y,      HINT_DY,         0, 80,       1,       0
+  dd TXT_OVL_SPEED,      SPEED_FPS,        0F, 0F0,     0F,      0
+  // v0.12.0-alpha: player-assist switches, always visible (ROWFLAG 0).
+  dd TXT_OVL_LOCKBOMB,   OVL_V_LOCKBOMB,   0, 1,        1,       1
+  dd TXT_OVL_AUTOBOMB,   OVL_V_AUTOBOMB,   0, 1,        1,       1
+OVL_ROWS_N:
+  dd 9
+
+// v0.7.11 -- the HINT SETTINGS panel, reached by pressing Z on the main
+// table's Hint row (same layout as Le01 v0.1.9).  Same six-dword shape and
+// the same descriptor-driven dispatch: every row operation resolves its row
+// through OVL_ACTIVE_*, so nothing has to know which table it is working on.
+//
+//   Player +      -- the self-machine judgement-point cross, ported from
+//                    le03.  It is gated by its OWN switch, not by Hint, and
+//                    it is drawn from the same playfield position through
+//                    the same Fix/ORIGIN transform as the hint markers, so
+//                    the two always agree.
+//   Fix X / Fix Y -- marker correction, in 1/8 logical pixels (see the
+//                    transform in draw_hints); 0x80 = neutral.
+//   Capture       -- write the player's current spot into hint/*.txt
+//   Frame         -- read-only: the stage frame counter
+//   Pattern       -- read-only: which boss pattern is running.  It is the
+//                    game's own 0-based "Pattern number" (0 = the first
+//                    pattern of the stage = the mid non-spell), which is
+//                    exactly what boss:P:F takes.  -1 means "no pattern"
+//                    (mid-stage, or no trustworthy number).
+OVL_ROWS2:
+  dd TXT_OVL_HINT,       OVL_V_HINT,       0, 1,        1,       1
+  // The two colour rows: left/right walk PP_PRESETS, Z types 6 hex digits.
+  // Their max is FFFFFF so a hand-typed value is accepted verbatim.
+  dd TXT_OVL_HINTCOL,    HINT_COL,         0, FFFFFF,   1,       0
+  dd TXT_OVL_PCROSS,     OVL_V_PCROSS,     0, 1,        1,       1
+  dd TXT_OVL_PSIZE,      OVL_V_PSIZE,      1, 40,       1,       0
+  dd TXT_OVL_PCOL,       OVL_V_PCOL,       0, FFFFFF,   1,       0
+  // Fix X / Fix Y: 1/8 logical pixels, 0x80 (128) neutral, 0..0x100.  The
+  // range and the neutral MUST change together with the transform in
+  // draw_hints / draw_pcross -- a wider range with the old transform would
+  // let the row hold a shift the maths does not apply.
+  dd TXT_OVL_FIX_X,      OVL_V_FIX_X,      0, 100,      1,       0
+  dd TXT_OVL_FIX_Y,      OVL_V_FIX_Y,      0, 100,      1,       0
+  dd TXT_OVL_CAPTURE,    OVL_V_CAPTURE,    0, 0,        0,       0
+  dd TXT_OVL_FRAME,      OVL_V_FRAME,      0, 0,        0,       0
+  dd TXT_OVL_PATTERN,    OVL_V_PATTERN,    0, 0,        0,       0
+OVL_ROWS2_N:
+  dd A
 
 // Parallel to OVL_ROWS, one dword per row, in the same order.
 //   0                -> the row draws its own format string (a number)
@@ -4868,15 +6209,71 @@ OVL_ALT:
   dd ALT_NOGAMEOVER
   dd ALT_LOCKPWR
   dd ALT_HINT
-  dd ALT_PCROSS
-  dd 0
-  dd 0
-  dd 0
   dd ALT_LOCKSEED
   dd 0
   dd 0
   dd 0
+  dd ALT_LOCKBOMB
+  dd ALT_AUTOBOMB
+
+OVL_ALT2:
+  dd ALT_HINT
   dd 0
+  dd ALT_PCROSS
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+
+// Parallel to the row tables: 0, or a pointer to a colour the row should
+// show as a swatch at the right-hand end.  (Nothing to show yet; the colour
+// rows land here when they are ported.)
+OVL_SWATCH:
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+
+OVL_SWATCH2:
+  dd 0
+  dd HINT_COL
+  dd 0
+  dd 0
+  dd OVL_V_PCOL
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+  dd 0
+
+// The live row set.  ovl_set_active fills these from OVL_SUB once per frame
+// (and again before drawing), so the renderer and the input handler always
+// agree even if the flag changes in between.
+OVL_ACTIVE_TBL:
+  dd OVL_ROWS
+OVL_ACTIVE_N:
+  dd 6
+OVL_ACTIVE_CUR:
+  dd OVL_CUR
+OVL_ACTIVE_ALT:
+  dd OVL_ALT
+OVL_ACTIVE_SW:
+  dd OVL_SWATCH
+// 1 = the hint settings panel is up.  ovl_sub_open sets it.
+OVL_SUB:
+  dd 0
+OVL_CUR2:
+  dd 0
+// Panel bottom = 0x28 + rows*0x10 (row pitch 0x10, first row at 0x28).
+// Recomputed every frame from OVL_ACTIVE_N.
+OVL_PANEL_B:
+  dd 0
+
 OVL_V_NOGAMEOVER:
   dd 0
 OVL_V_LOCKPWR:
@@ -4963,6 +6360,19 @@ TXT_OVL_HINT:
   db 48 00 69 00 6E 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
 TXT_OVL_PCROSS:
   db 50 00 6C 00 61 00 79 00 65 00 72 00 20 00 2B 00 3A 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+// v0.7.11 -- the two colour rows and the Player+ cross size.  The colour
+// rows format with %06X, so the hex digits line up under each other; the
+// [t] variants are what the label becomes while you are typing.
+TXT_OVL_HINTCOL:
+  db 48 00 69 00 6E 00 74 00 20 00 63 00 6F 00 6C 00 3A 00 20 00 20 00 20 00 20 00 25 00 30 00 36 00 58 00 00 00
+TXT_OVL_HINTCOL_EDIT:
+  db 48 00 69 00 6E 00 74 00 20 00 63 00 6F 00 6C 00 5B 00 74 00 5D 00 3A 00 20 00 20 00 25 00 30 00 36 00 58 00 00 00
+TXT_OVL_PSIZE:
+  db 50 00 2B 00 20 00 73 00 69 00 7A 00 65 00 3A 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_PCOL:
+  db 50 00 2B 00 20 00 63 00 6F 00 6C 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 30 00 36 00 58 00 00 00
+TXT_OVL_PCOL_EDIT:
+  db 50 00 2B 00 20 00 63 00 6F 00 6C 00 5B 00 74 00 5D 00 3A 00 20 00 20 00 20 00 20 00 25 00 30 00 36 00 58 00 00 00
 TXT_OVL_CAPTURE:
   db 43 00 61 00 70 00 74 00 75 00 72 00 65 00 3A 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
 TXT_OVL_FRAME:
@@ -4975,8 +6385,10 @@ TXT_OVL_SEED:
   db 53 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 75 00 00 00
 TXT_OVL_SEED_EDIT:
   db 53 00 65 00 65 00 64 00 5B 00 74 00 79 00 70 00 65 00 5D 00 3A 00 20 00 20 00 25 00 75 00 00 00
+TXT_OVL_SPEED:
+  db 53 00 70 00 65 00 65 00 64 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
 TXT_OVL_DEBT:
-  db 48 00 69 00 74 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
+  db 4D 00 69 00 73 00 73 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
 TXT_OVL_FIX_X:
   db 46 00 69 00 78 00 20 00 58 00 3A 00 20 00 20 00 20 00 20 00 20 00 20 00 20 00 25 00 64 00 00 00
 TXT_OVL_FIX_Y:
@@ -4989,6 +6401,10 @@ ALT_NOGAMEOVER:
   dd TXT_NOGAMEOVER_OFF, TXT_NOGAMEOVER_ON
 ALT_LOCKPWR:
   dd TXT_LOCKPWR_OFF, TXT_LOCKPWR_ON
+ALT_LOCKBOMB:
+  dd TXT_LOCKBOMB_OFF, TXT_LOCKBOMB_ON
+ALT_AUTOBOMB:
+  dd TXT_AUTOBOMB_OFF, TXT_AUTOBOMB_ON
 ALT_HINT:
   dd TXT_HINT_OFF, TXT_HINT_ON
 ALT_PCROSS:
@@ -5019,8 +6435,7 @@ TXT_LOCKSEED_ON:
 // ================= settings file data (v0.7.8) ====================
 CFG_TAILW:
   db 70 00 72 00 61 00 63 00 2E 00 63 00 66 00 67 00 00 00
-CFG_KEY:
-  db 70 6C 61 79 65 72 70 6C 75 73 3D
+// 520 bytes = MAX_PATH WCHARs, for <exe dir>prac.cfg.
 CFG_PATHW:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -5055,6 +6470,7 @@ CFG_PATHW:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00
+// 256 bytes; seven short keys need well under a tenth of that.
 CFG_BUF:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
@@ -5064,8 +6480,70 @@ CFG_BUF:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
-CFG_LINE:
   db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+// ---- the key table: key ptr, key length, value ptr, max ----------
+// Seven keys are persisted; deleting prac.cfg restores every
+// build-time default.  cfg_tick rewrites the file whenever one of the
+// values stops matching CFG_LAST.
+CFG_TABLE:
+  dd CFG_K_HINT,     4, OVL_V_HINT,      1
+  dd CFG_K_HINTCOL,  7, HINT_COL,        FFFFFF
+  dd CFG_K_PCROSS,   A, OVL_V_PCROSS,    1
+  dd CFG_K_PPSIZE,   6, OVL_V_PSIZE,     40
+  dd CFG_K_PPCOL,    5, OVL_V_PCOL,      FFFFFF
+  dd CFG_K_FIXX,     4, OVL_V_FIX_X,     100
+  dd CFG_K_FIXY,     4, OVL_V_FIX_Y,     100
+  dd CFG_K_DEVMODE, 7, CFG_DEVMODE,    1
+  dd CFG_K_LOCKBOMB, 8, OVL_V_LOCKBOMB, 1
+  dd CFG_K_AUTOBOMB, 8, OVL_V_AUTOBOMB, 1
+CFG_N:
+  dd A
+// Developer-only rows: one byte per row, bit0 set = hidden unless devmode.
+OVL_ROWFLAG:
+  db 0,0,0,1,1,0,0,0,0,0
+OVL_ROWFLAG2:
+  db 0,0,0,0,0,0,0,0,0,0,0,0
+CFG_DEVMODE:
+  dd 0
+OVL_ACTIVE_FLAG:
+  dd 0
+OVL_VISN:
+  dd 0
+OVL_RVIS:
+  dd 0
+CFG_ENT:
+  dd 0
+// Scratch for cfg_itoa (a 32-bit value is at most 10 digits).
+CFG_TMPD:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+// The seven key names, no terminator needed (the table carries the
+// length) but NUL-terminated anyway so they are safe to print.
+CFG_K_HINT:
+  db 68 69 6E 74 00
+CFG_K_HINTCOL:
+  db 68 69 6E 74 63 6F 6C 00
+CFG_K_PCROSS:
+  db 70 6C 61 79 65 72 70 6C 75 73 00
+CFG_K_PPSIZE:
+  db 70 70 73 69 7A 65 00
+CFG_K_PPCOL:
+  db 70 70 63 6F 6C 00
+CFG_K_FIXX:
+  db 66 69 78 78 00
+CFG_K_FIXY:
+  db 66 69 78 79 00
+CFG_K_DEVMODE:
+  db 64 65 76 6D 6F 64 65 00
+// 32 bytes: the longest key plus a 10-digit value plus LF is 23.
+CFG_LINE:
+  db 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 CFG_H:
   dd 0
 CFG_RD:
@@ -5076,9 +6554,12 @@ CFG_VAL:
   dd 0
 CFG_LOADED:
   dd 0
-// -1 so the very first cfg_tick_chk cannot match by accident.
+// One dword per table entry: the last values we wrote, so cfg_tick has
+// a baseline to compare against and does not rewrite the disk every
+// frame.  -1 so the very first comparison cannot match by accident.
 CFG_LAST:
-  dd FFFFFFFF
+  dd FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF
+  dd FFFFFFFF FFFFFFFF FFFFFFFF
 CFG_WROTE:
   dd 0
 
@@ -5150,20 +6631,76 @@ HINT_LEN:
 HINT_SYM:
   dd 2B
 HINT_COL:
-  dd FF
+  // HTML red, 0x00RRGGBB.  It used to be stored raw as FF, which box()
+  // reads as 0x00BBGGRR = red; as HTML red is FF0000, and ovl_swaprb turns
+  // that back into FF -- so the visible default colour is unchanged.
+  dd 0FF0000
 HINT_COL_DIM:
   dd 40
 HINT_FADE_R:
   dd 28
-// Marker correction, added to the marker's playfield coordinates.
-// BIASED by 0x40 because ovl_apply compares unsigned, so a row
-// cannot hold a negative number: 0x40 means no shift, 0x40+n moves
-// the marker n pixels right/down.  Menu rows Fix X / Fix Y expose
-// this so the marker can be dialled onto the game's own hitbox dot.
+// ---- v0.7.11: the colour rows (Le01 v0.1.9 design) -------------------
+// HINT_COL is the Hint col row's storage AND the default marker colour.
+// OVL_V_PCOL is the Player+ cross colour, OVL_V_PSIZE its arm in logical
+// pixels.  All of them are HTML 0x00RRGGBB and are converted to what box()
+// wants by ovl_swaprb at the single point where a colour is handed over.
+OVL_V_PCOL:
+  dd 0FF0000
+OVL_V_PSIZE:
+  dd 4
+OVL_SWX:
+  // logical x.  Clear of the value column even while the [t] label is one
+  // character wider, which is what made it overlap the last hex digit.
+  dd 0D8
+OVL_TYPE_KIND:
+  dd 0
+OVL_TYPE_VAL:
+  dd 0
+OVL_TYPE_ORIG:
+  dd 0
+OVL_TYPE_HEXN:
+  dd 0
+// Preset colours for the two colour rows, in HTML order (0x00RRGGBB).
+// Left/right on a colour row walks this list; Z types an exact value.
+PP_PRESETS:
+  dd 0FFFFFF
+  dd 0FFFFA0
+  dd 0FF0000
+  dd 0FF8000
+  dd 0FFFF00
+  dd 000FF00
+  dd 000FFFF
+  dd 00000FF
+  dd 08000FF
+  dd 0FF00FF
+  dd 0FF80C0
+  dd 0808080
+PP_PRESETS_N:
+  dd C
+// ---- marker correction (v0.7.13) -------------------------------------
+// Fix X / Fix Y are now in 1/8 logical pixels with 0x80 (128) as neutral,
+// exactly like Le01 v0.1.9.  The old HINT_DX / HINT_DY pair was one whole
+// logical pixel per step with 0x40 neutral; those two cells are kept (they
+// are still in the layout, so anything reading them keeps working) but
+// nothing uses them any more.
+//
+// Why 1/8: the marker still lands on whole logical pixels -- box() takes
+// integers -- but what the finer step buys is control over WHERE the
+// truncation boundary falls.  The player's position is fractional, so that
+// is the only way to line the cross up with a game dot drawn at a
+// different rounding.
 HINT_DX:
   dd 41
 HINT_DY:
   dd 40
+OVL_V_FIX_X:
+  dd 87
+OVL_V_FIX_Y:
+  dd 81
+// 8.0f, for the 1/8-unit scale (0x41000000).  SSE is available and the
+// engine itself uses movss/mulss, so the float path costs nothing here.
+HINT_F8:
+  dd 41000000
 HINT_DASH:
   dd 10
 HINT_USECOL:
@@ -5210,6 +6747,16 @@ HINT_E_EK:
 HINT_E_EP:
   dd 0
 HINT_E_EF:
+  dd 0
+// v0.7.13 -- the optional per-line colour, taken from three extra decimal
+// columns on the same line (R,G,B).  0 means "not written, use Hint col".
+// The scratch pair is what the three numbers land in before they are packed
+// into HINT_E_COL, which hint_store copies into the entry's +0x2C slot.
+HINT_E_COL:
+  dd 0
+HINT_TMP_N:
+  dd 0
+HINT_TMP_COL:
   dd 0
 HINT_TKIND:
   dd 0
@@ -5259,6 +6806,15 @@ HINT_PAT_LAST:
   dd FFFFFFFF
 HINT_PAT_SKIP:
   dd FFFFFFFF
+// v0.7.11 -- the stage number of the last stage start.  initFrameTimer
+// compares the new stage's number against it: a repeat means this is a
+// RETRY of the same stage (so HINT_PAT_LAST must be cleared, or the
+// retry's first pattern number can equal it and latch the new-fight
+// suppression forever); a different number means a stage change, where
+// HINT_PAT_LAST is exactly what suppresses the recycled value during the
+// new boss's intro.  See the v0.1.10 note in Le01's CHANGELOG.
+HINT_PAT_STAGE:
+  dd 0
 // The time specs the capture is about to write (see hint_emit_time).
 HINT_C_KIND:
   dd 0
@@ -5349,7 +6905,382 @@ cave+7800:
 HINT_ARR:
 cave_end:
 
+// ---- Speed clamp on commit (lives after the pinned string table) ----
+cave+9000:
+fps_commit_clamp:
+  push eax
+  mov eax, [OVL_TYPE_VAL]
+  cmp eax, SPEED_FPS
+  jne fcc_done
+  // 0 means nothing was typed yet -- clamping it is what snapped the
+  // row back to 60 the instant Z was pressed.
+  cmp dword ptr [SPEED_FPS], 1
+  jb fcc_done
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne fcc_done
+  cmp dword ptr [SPEED_FPS], 3C
+  jae fcc_done
+  mov dword ptr [SPEED_FPS], 3C
+fcc_done:
+  pop eax
+  ret
+
+cave+9100:
+spd_typing_on:
+  mov dword ptr [SPEED_TYPING], 1
+  ret
+
+cave+9200:
+spd_typing_off:
+  mov dword ptr [SPEED_TYPING], 0
+  ret
+
+cave+9400:
+fps_tick2:
+  push eax
+  push ecx
+  push edx
+  cmp dword ptr [DLL_LOADED], 0
+  jne ft_no_dll
+  mov dword ptr [DLL_LOADED], 1
+  // ---- embedded speed DLL: extract to the temp dir and load it --------
+  // Falls back to the sidecar next to the exe when anything fails.
+  pushad
+  push SPD_TMPBUF               // stdcall: rightmost arg first
+  push 104
+  call dword ptr [7AC138]      // GetTempPathA(260, buf)
+  test eax, eax
+  jz ft_spd_fb
+  mov edi, SPD_TMPBUF
+  add edi, eax
+  mov esi, SPD_TMPNAME
+ft_spd_nc:
+  mov al, [esi]
+  test al, al
+  jz ft_spd_ne
+  mov [edi], al
+  inc esi
+  inc edi
+  jmp ft_spd_nc
+ft_spd_ne:
+  mov byte ptr [edi], 0
+  push 104
+  push SPD_TMPW
+  push -1
+  push SPD_TMPBUF
+  push 0
+  push 0
+  call dword ptr [7AC144]        // MultiByteToWideChar(CP_ACP,0,buf,-1,wbuf,260)
+  test eax, eax
+  jz ft_spd_fb
+  push SPD_TMPW
+  call dword ptr [7AC234]       // drop a stale copy from a previous run
+  push 0
+  push 80
+  push 2
+  push 0
+  push 0
+  push 40000000
+  push SPD_TMPW
+  call dword ptr [7AC238]       // CreateFileW(..., GENERIC_WRITE, CREATE_ALWAYS)
+  cmp eax, -1
+  je ft_spd_fb
+  mov ebx, eax
+  push 0
+  push SPD_WRITTEN
+  mov eax, SPD_DLL_END
+  sub eax, SPD_DLL
+  push eax
+  push SPD_DLL
+  push ebx
+  call dword ptr [7AC22C]        // WriteFile
+  push ebx
+  call dword ptr [7AC250]        // CloseHandle
+  push SPD_TMPBUF
+  call dword ptr [7AC0D0]      // LoadLibraryA(temp path)
+  jmp ft_spd_done
+ft_spd_fb:
+  push DLLNAME
+  call dword ptr [7AC0D0]      // fallback: sidecar next to the exe
+ft_spd_done:
+  mov [SPD_HMOD], eax
+  popad
+  mov eax, [SPD_HMOD]
+  test eax, eax
+  jz ft_no_dll
+  push eax
+  push NVNAME
+  push eax
+  call dword ptr [7AC204]          // GetProcAddress(h, "g_noVsync")
+  mov [NOVSYNC_PTR], eax
+  pop eax
+ft_no_dll:
+  // 0 = the row was just cleared for typing: leave K alone
+  mov eax, [SPEED_FPS]
+  cmp eax, 1
+  jb ft_done
+  // never touch the speed while the digits are still arriving
+  cmp dword ptr [SPEED_TYPING], 0
+  jne ft_done
+  // deceleration is devmode-only; stepping included, so it lives here
+  cmp dword ptr [CFG_DEVMODE], 0
+  jne ft_div
+  cmp eax, 3C
+  jae ft_div
+  mov eax, 3C
+  mov [SPEED_FPS], eax
+ft_div:
+  // vsync only has to go when the target rate is above 60
+  mov ecx, [NOVSYNC_PTR]
+  test ecx, ecx
+  jz ft_nv_skip
+  push eax
+  xor edx, edx
+  cmp eax, 3C
+  seta dl
+  mov [ecx], edx
+  pop eax
+ft_nv_skip:
+  push eax
+  mov eax, 0EA60
+  pop ecx
+  xor edx, edx
+  div ecx
+  mov [game+B5000], eax
+ft_done:
+  pop edx
+  pop ecx
+  pop eax
+  ret
+
+// =================================================================== //
+// Hitbox overlay (v0.11.0-alpha) -- read-only collision display.      //
+// The DLL only reads game memory; nothing here writes collision data. //
+// =================================================================== //
+ovl_hb_stage:
+  // Collision dispatcher entry, ECX = the live stage object. Recording it
+  // here means the display never uses a cached pointer from a previous stage.
+  pushfd
+  push eax
+  mov eax, ecx
+  mov [HB_STAGE], eax
+  mov dword ptr [HB_ACTIVE], 1
+  pop eax
+  popfd
+  // re-execute the displaced prologue, then rejoin the dispatcher
+  push ebp
+  mov ebp, esp
+  and esp, FFFFFFF8
+  jmp game+C2D56
+
+ovl_hb_draw:
+  // Replaces `call game+1C4720`; the 14 composite arguments are on the stack.
+  // After the overlay is written into the scene texture we tail-call the
+  // original compositor, so its `ret` lands on the game's `add esp,0x38`.
+  pushfd
+  pushad
+  cmp dword ptr [HB_ACTIVE], 0
+  je ovl_hb_skip
+  mov dword ptr [HB_ACTIVE], 0
+  cmp dword ptr [CFG_DEVMODE], 0
+  je ovl_hb_skip
+  cmp dword ptr [HB_FN], 0
+  jne ovl_hb_call
+  cmp dword ptr [HB_TRIED], 0
+  jne ovl_hb_skip
+  mov dword ptr [HB_TRIED], 1
+  // ---- embedded hitbox DLL: extract to the temp dir and load it --------
+  // Activation is unchanged: only when the stage-capture hook has set
+  // HB_ACTIVE and CFG_DEVMODE is on does this block run at all.
+  pushad
+  push HB_TMPBUF                  // stdcall: rightmost argument first
+  push 104
+  call dword ptr [7AC138]      // GetTempPathA(260, buf)
+  test eax, eax
+  jz ovl_hb_fb
+  mov edi, HB_TMPBUF
+  add edi, eax
+  mov esi, HB_TMPNAME
+ovl_hb_nc:
+  mov al, [esi]
+  test al, al
+  jz ovl_hb_ne
+  mov [edi], al
+  inc esi
+  inc edi
+  jmp ovl_hb_nc
+ovl_hb_ne:
+  mov byte ptr [edi], 0
+  push 104
+  push HB_TMPW
+  push -1
+  push HB_TMPBUF
+  push 0
+  push 0
+  call dword ptr [7AC144]        // MultiByteToWideChar(CP_ACP,0,buf,-1,wbuf,260)
+  test eax, eax
+  jz ovl_hb_fb
+  push HB_TMPW
+  call dword ptr [7AC234]       // drop a stale copy from a previous run
+  push 0
+  push 80
+  push 2
+  push 0
+  push 0
+  push 40000000
+  push HB_TMPW
+  call dword ptr [7AC238]       // CreateFileW(..., GENERIC_WRITE, CREATE_ALWAYS)
+  cmp eax, -1
+  je ovl_hb_fb
+  mov ebx, eax
+  push 0
+  push HB_WRITTEN
+  mov eax, HB_DLL_END
+  sub eax, HB_DLL
+  push eax
+  push HB_DLL
+  push ebx
+  call dword ptr [7AC22C]        // WriteFile
+  push ebx
+  call dword ptr [7AC250]        // CloseHandle
+  push HB_TMPBUF
+  call dword ptr [7AC0D0]      // LoadLibraryA(temp path)
+  jmp ovl_hb_ld
+ovl_hb_fb:
+  push HB_DLLNAME
+  call dword ptr [7AC0D0]      // fallback: sidecar next to the exe
+ovl_hb_ld:
+  mov [HB_HMOD], eax
+  popad
+  mov eax, [HB_HMOD]
+  test eax, eax
+  jz ovl_hb_skip
+  push HB_FNNAME
+  push eax
+  call dword ptr [7AC204]         // GetProcAddress(h, "hb_frame")
+  mov [HB_FN], eax
+  test eax, eax
+  jz ovl_hb_skip
+ovl_hb_call:
+  // HBCTX field order must match work/Le02hitbox.cpp.
+  mov eax, [HB_STAGE]
+  mov dword ptr [HB_CTX+0], eax
+  mov eax, [E84814]               // scene texture the compositor consumes
+  mov dword ptr [HB_CTX+4], eax
+  mov eax, [E8480C]
+  mov dword ptr [HB_CTX+8], eax
+  mov eax, [E84810]
+  mov dword ptr [HB_CTX+C], eax
+  mov dword ptr [HB_CTX+10], 42000000  // 32.0f playfield origin X (fixx=136 -> +1)
+  mov dword ptr [HB_CTX+14], 41800000  // 16.0f playfield origin Y
+  mov dword ptr [HB_CTX+18], 44200000  // 640.0f logical width
+  mov dword ptr [HB_CTX+1C], 43F00000  // 480.0f logical height
+  mov dword ptr [HB_CTX+20], 1
+  push HB_CTX
+  call dword ptr [HB_FN]
+  add esp, 4
+ovl_hb_skip:
+  popad
+  popfd
+  jmp game+1C4720
+
+HB_STAGE:
+  dd 0
+HB_ACTIVE:
+  dd 0
+HB_FN:
+  dd 0
+HB_TRIED:
+  dd 0
+HB_CTX:
+  dd 0, 0, 0, 0, 0, 0, 0, 0, 0
+HB_DLLNAME:
+  db 4C 65 30 32 68 69 74 62 6F 78 2D 76 31 2E 64 6C 6C 00 // "Le02hitbox-v1.dll"
+HB_FNNAME:
+  db 68 62 5F 66 72 61 6D 65 00                            // "hb_frame"
+
+
+
+// ---- embedded speed DLL (v0.13) -----------------------------------
+// incbin pulls the stripped Le03speed.dll into the cave; the loader
+// above copies it to the temp dir and loads it from there.
+cave+11000:
+SPD_DLL:
+  incbin("../out/Le03speed.stripped.dll")
+SPD_DLL_END:
+SPD_TMPBUF:
+  res 104                         // 260 ANSI bytes
+SPD_TMPW:
+  res 208                         // 260 wide chars
+SPD_WRITTEN:
+  dd 0
+SPD_HMOD:
+  dd 0
+SPD_TMPNAME:
+  db 7E 6C 65 30 33 73 70 64 2E 64 6C 6C 00
+
+
+// ---- embedded hitbox DLL ------------------------------------------
+// incbin pulls the stripped renderer into the cave; the block above copies
+// it to the temp dir and loads it from there.
+cave+15000:
+HB_DLL:
+  incbin("../out/Le02hitbox-v1.stripped.dll")
+HB_DLL_END:
+HB_TMPBUF:
+  res 104                         // 260 ANSI bytes
+HB_TMPW:
+  res 208                         // 260 wide chars
+HB_WRITTEN:
+  dd 0
+HB_HMOD:
+  dd 0
+HB_TMPNAME:
+  db 7E 6C 65 30 32 68 62 31 2E 64 6C 6C 00
+
+cave+9800:
+TAS_START:
+  dd 1 1 4 2 5 0 7
+TAS_LENGTH:
+  dd B7C B7C 654 960 690 99C B7C
+TAS_TIMER:
+  dd 2F94 2F94 2F94 2F94 2F94 2F94 438
+TXT_OVL_TITLE2:
+  db 46 00 31 00 32 00 20 00 2D 00 20 00 48 00 49 00 4E 00 54 00 20 00 28 00 45 00 53 00 43 00 3A 00 20 00 62 00 61 00 63 00 6B 00 29 00 00 00
+OVL_V_LOCKBOMB:
+  dd 0
+OVL_V_AUTOBOMB:
+  dd 0
+BOMB_TARGET:
+  dd 0
+BOMB_HELD:
+  dd 0
+CFG_K_LOCKBOMB:
+  db 6C 6F 63 6B 62 6F 6D 62 00
+CFG_K_AUTOBOMB:
+  db 61 75 74 6F 62 6F 6D 62 00
+TXT_OVL_LOCKBOMB:
+  db 4C 00 6F 00 63 00 6B 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_OVL_AUTOBOMB:
+  db 41 00 75 00 74 00 6F 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 25 00 64 00 00 00
+TXT_LOCKBOMB_OFF:
+  db 4C 00 6F 00 63 00 6B 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_LOCKBOMB_ON:
+  db 4C 00 6F 00 63 00 6B 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+TXT_AUTOBOMB_OFF:
+  db 41 00 75 00 74 00 6F 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 6F 00 66 00 66 00 00 00
+TXT_AUTOBOMB_ON:
+  db 41 00 75 00 74 00 6F 00 20 00 42 00 6F 00 6D 00 62 00 3A 00 20 00 20 00 20 00 6F 00 6E 00 20 00 00 00
+
 [DISABLE]
+game+C2D50:
+ db 55 8B EC 83 E4 F8
+game+1C75F0:
+ db E8 2B D1 FF FF
+game+B9766:
+ db 8B 41 54 48 83 F8 05
+game+B9897:
+ db E8 44 C2 F6 FF
 game+CFFCD:
  db C7 05 10 51 A6 00 01 00 00 00
 game+14BD50:

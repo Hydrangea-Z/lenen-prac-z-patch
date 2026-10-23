@@ -1,10 +1,15 @@
 # Len'en Practice Tools · Hint Manual
 
-Applies to **Reactivate majestical imperial (Le03) v0.5.9** and **Earthen Miraculous Sword (Le02) v0.7.8**.
+Applies to **无现里 / Lenen's *Brilliant Imperishable* (Le01) v0.2.0**,
+**蛇丛剑 / *Earthen Miraculous Sword* (Le02) v0.8.0** and
+**灵烈传 / *Reactivate majestical imperial* (Le03) v0.6.0**.
 
-Both games use the same hint system and the same file format. A few details differ;
-where they do, both values are given. This file is `.md`, so **the game never reads it** —
-it is safe to keep inside the `hint\` folder.
+All three games use the same hint system and the same F12 menu (a main table plus a
+10-row hint settings panel). A few details differ; where they do, both values are
+given -- for instance **Le03 has two characters, so its main menu carries an extra
+`Lock P2` row**. **The pause-menu hotkeys (`R` restart stage / `Q` back to title)
+exist in all three games** — see section 6.5. This file is `.md`, so
+**the game never reads it** — it is safe to keep inside the `hint\` folder.
 
 > Chinese edition: `使用说明.md` / `使用说明.html` (section-for-section equivalent).
 
@@ -85,8 +90,10 @@ Either layout works, and you can mix them:
 ## 3. Line format
 
 ```
-<marker>  <size>  <character>  <start>  <position>  <end>
+<marker>  <size>  <character>  <start>  <position>  <end>  [R,G,B]
 ```
+
+Those last three numbers are **optional** (see "Colour" below).
 
 - Fields may be separated by **spaces, tabs or commas** — mixing is fine.
 - `#` to end of line is a comment; blank lines are ignored.
@@ -128,6 +135,29 @@ Marker size, default `16`.
 
 This is exactly the value the F12 `Capture` row writes.
 A bad position is **not** rejected — it is simply drawn off-screen.
+
+### Colour (fields 7-9, optional) — all three games, v0.1.9 / v0.7.13 / v0.5.15 and up
+
+Add **three decimal numbers in 0..255** at the end of the line and that marker
+gets its own colour:
+
+```
++  16  all  120  192,348  400  255,80,0      <- orange
+-  16  all  120  100,300  900  0,255,255     <- cyan
++  16  all  120  192,348  400                <- omitted = use the Hint col row
+```
+
+- The three numbers may be separated by **commas or spaces** (as with the
+  position), so `255,80,0` and `255 80 0` are the same thing.
+- **All three are required.** If only one or two are given, or the trailing
+  fields are not numbers at all (a trailing comment, say), the line is treated
+  as "no colour given" and **follows the F12 `Hint col` row**. Falling back to
+  the default is deliberate: it never guesses.
+- The colour applies to **every** marker shape (`+`, `-`, `|`).
+- Markers dim when the player stands on them; the dim colour is computed as
+  **each channel halved**, so it works for any colour you pick.
+- **Existing files need no changes**: a six-column line keeps using
+  `Hint col`, exactly as before.
 
 ---
 
@@ -173,7 +203,8 @@ and conversely absolute-frame entries keep working during a boss fight.
 1. Enter a stage and press **F12**.
 2. Make sure **`Hint:` is `on`** (it is by default).
 3. Fly the player to the spot you want to mark.
-4. Move the cursor to the **`Capture:`** row and press **Z**:
+4. Put the cursor on **`Hint:`** and press **Z** to open the **hint settings
+   panel**, then move the cursor to the **`Capture:`** row and press **Z**:
    - It appends **the current position and the current time** to the `.txt` for
      **the stage you are in** (stage 7 writes `7.txt`; a missing file is created
      automatically, with the stage number as its header).
@@ -186,42 +217,111 @@ and conversely absolute-frame entries keep working during a boss fight.
    **It takes effect the next time you enter the stage.**
 
 The number to the right of `Capture:` is how many entries you have written this session.
+**ESC** goes back to the main menu; **F12** closes the whole overlay.
 
 ---
 
 ## 6. F12 menu quick reference
 
-Both games have **12 rows**, but the order differs slightly:
+### Main menu + hint settings panel
 
-**Reactivate majestical imperial (Le03)**
+**Main menu (Le01 / Le02, 6 rows)**
 ```
-No Gameover / Lock Power / Hint / Player + / Capture / Pattern /
-Hit / Lock Seed / Seed / Frame / Fix X / Fix Y
+No Gameover / Lock Power / Hint / Lock Seed / Seed / Hit
 ```
 
-**Earthen Miraculous Sword (Le02)**
+**Le03 has 7 rows** -- it is the one game with two characters, and each character
+keeps its own power value, so `Lock Power` splits in two:
 ```
-No Gameover / Lock Power / Hint / Player + / Capture / Frame /
-Pattern / Lock Seed / Seed / Hit / Fix X / Fix Y
+No Gameover / Lock P1 / Lock P2 / Hint / Lock Seed / Seed / Hit
+```
+`Lock P1` freezes the main character's power and `Lock P2` the partner's;
+**the two switches are independent** (you can lock just one).
+
+**Hint settings panel (10 rows)** — put the cursor on the `Hint` row and press
+**Z**; the title becomes `F12 - HINT (ESC: back)`:
+```
+Hint / Hint col / Player + / P+ size / P+ col / Fix X / Fix Y / Capture / Frame / Pattern
 ```
 
 | Key | Action |
 |---|---|
 | `↑` `↓` | move the cursor (wraps at both ends) |
-| `←` `→` | change the value (hold for continuous fine steps) |
-| `Z` | flip a switch row; `Capture` = capture once; `Seed` = start digit entry |
+| `←` `→` | change the value (hold for continuous fine steps; on a colour row it walks the presets) |
+| `Z` | flip a switch row; `Capture` = capture once; `Seed` = digit entry; a colour row = hex entry; **`Hint` on the main menu = open the settings panel** |
+| `ESC` | while typing = cancel; otherwise = back out of the settings panel |
+| `F12` | open / close the whole overlay |
 | while open | the game itself receives no input |
 
 What the rows mean:
 
 - **`Hint:`** — master switch for hint markers, default `on`
+- **`Hint col:`** — the colour used by every hint line that names none
 - **`Player +:`** — the player's judgement-point crosshair, default `on`
+- **`P+ size:`** — crosshair arm length (1..64 logical pixels, default 4)
+- **`P+ col:`** — crosshair colour
 - **`Capture:`** — press Z to write the current position + time into this stage's txt
 - **`Pattern:`** — read-only. Current boss pattern number (**0-based**); `-1` mid-stage
 - **`Frame:`** — read-only. Current stage frame
 - **`Hit:`** — read-only. Times hit (**reset on every stage entry**, including retries)
 - **`Fix X:` / `Fix Y:`** — calibration for the judgement-point crosshair (next section)
 - **`Seed:` / `Lock Seed:`** — RNG seed locking
+- **`No Gameover:`** — invincibility
+- **`Lock Power:`** (Le01 / Le02) or **`Lock P1:` + `Lock P2:`** (Le03) — frozen power.
+  Le03 has two characters: `P1` freezes the main one and `P2` the partner, each latching
+  the power you had at the moment you flipped it
+
+### Using the colour rows (`Hint col` / `P+ col`)
+
+- **`←` `→`** walk **12 presets**: white / pale yellow / red / orange / yellow /
+  green / cyan / blue / violet / magenta / pink / grey.
+- **`Z`** enters **hex entry**: type six digits of `RRGGBB`, exactly as you would
+  write a colour on a web page (red = `FF0000`). The digits fill **from the left**,
+  so typing F, F, 0, 0, 0, 0 shows `FF0000` the whole way. `BACK` removes one digit,
+  `Z` commits, `ESC` restores the old value.
+- The little **swatch** at the end of the row shows the current colour.
+- `Hint col` applies to **every hint line that names no colour**; to give one line
+  its own colour, add `R,G,B` at the end of that line (see section 3).
+
+### Earthen Miraculous Sword (Le02) / Reactivate majestical imperial (Le03)
+
+**All three games are now identical** — a main menu plus a 10-row hint settings panel,
+the colour rows, the multi-key `prac.cfg` and the 1/8-unit `Fix X/Y` (see sections 6
+and 8). The differences are **Le03's extra main-menu row** (two characters, so
+`Lock Power` becomes `Lock P1` / `Lock P2`) plus each game's own quirks (Le03 has
+stages 1..8 including Alpha, for instance).
+
+> Older builds (Le02 before v0.7.12, Le03 before v0.5.15) used the flat 12-row menu:
+> `No Gameover / Lock Power / Hint / Player + / Capture / Frame /
+> Pattern / Lock Seed / Seed / Hit / Fix X / Fix Y`.
+> Rows move around after upgrading, but the values in `prac.cfg` carry over
+> (the key names did not change).
+>
+> Le03 up to v0.5.17 had a single `Lock Power` row that only froze the main
+> character; from v0.5.18 it is `Lock P1` / `Lock P2`.
+
+### Pause-menu hotkeys: `R` restart stage / `Q` back to title　★ all three games (Le03 v0.6.0 / Le02 v0.8.0 / Le01 v0.2.0 and up)
+
+Pressing **ESC** in game opens the pause menu
+(`Resume / Restart / Return to title / Quit`). Restarting or quitting used to mean
+moving the cursor with the arrow keys, pressing Z, then picking "yes" in a
+confirmation box and pressing Z again. **Now it is one key:**
+
+| Key | Effect |
+| --- | --- |
+| **`R`** | restart the current stage immediately (same as `Restart` + confirm) |
+| **`Q`** | go straight back to the title screen (same as `Return to title` + confirm) |
+
+- **Only active while that pause menu is open.** Pressing `R` / `Q` during normal
+  play, a boss fight or mid-stage does nothing at all and cannot disturb your run.
+- **This is not a key macro.** The patch writes the game's own scene-phase variable,
+  i.e. it takes exactly the same code path the menu takes after you confirm — so the
+  menu does **not** flash and the cursor does **not** jump. Where the cursor happens
+  to be makes no difference.
+- Because it calls that path directly, there is no risk of the cursor sliding onto
+  `Quit`: `R` / `Q` can only ever restart or return to the title.
+- Quitting the game is still done through the menu's `Quit` item (deliberately not
+  bound to a hotkey, to rule out accidents).
 
 ---
 
@@ -231,42 +331,95 @@ What the rows mean:
   transform as the hint markers**. So when you place a hint under your own feet,
   the two crosses **must coincide** — that is deliberate, and you can use it to check
   one against the other.
+- **`P+ size`** is the arm length (logical pixels, 1..64, default 4). One logical
+  pixel is about 3.33 screen pixels, so 4 draws roughly 27 screen pixels wide.
+- **`P+ col`** is the crosshair colour (presets / hex entry, see section 6).
 - If the crosshair is slightly off the little dot the game draws, fine-tune it with
   **`Fix X` / `Fix Y`**:
-  - default `64` = no shift (Le02 ships at `65`, i.e. one step right)
-  - **larger = further right / further down**
-  - one step is roughly 0.8 px in Le03 and 0.6 px in Le02, so you can land it very precisely
+
+  | | all three games (Le01 v0.1.9 / Le02 v0.7.13 / Le03 v0.5.16 and up) |
+  |---|---|
+  | neutral (no shift) | **`128`** |
+  | one step | **1/8 logical pixel** |
+  | range | `0 .. 256` |
+
+  > Le03 up to v0.5.14 used `64` / a quarter of a logical pixel / `0 .. 128`. The
+  > neutral point moved to 128 with the new scale, but **no manual migration is
+  > needed**: the old `prac.cfg` stored only `playerplus`, so it never held
+  > `fixx` / `fixy` and you get the new neutral automatically.
+
+  **Larger = further right / further down.**
+
+- **★ Why 1/8 of a pixel is worth having**: `box()` only takes integers, so the
+  *visible* position is always a whole logical pixel (about 3.33 screen pixels).
+  What the finer step buys is control over **where the truncation boundary falls**.
+  The player's own position is fractional, so if the game's judgement dot is drawn
+  with round-to-nearest while we truncate, setting `Fix` to `132` (+0.5) makes the
+  two coincide for **every** player position; a whole-pixel step can never do that.
+  **8 steps = exactly one logical pixel** (measured: `Fix=128` -> x 332,
+  `136` -> 333, `144` -> 334).
 - **The hint markers follow the same calibration**, so you only align it once.
+- **The calibration is saved to `prac.cfg`**, so you do not redo it every launch.
 
 ---
 
 ## 8. The settings file `prac.cfg`
 
-Next to the exe, plain text, one setting per line:
+Next to the exe, plain text, one setting per line, all values decimal:
 
 ```
 playerplus=1
+hint=1
+hintcol=16744448
+ppsize=4
+ppcol=16777215
+fixx=128
+fixy=128
 ```
 
-- Only the **`Player +`** switch is remembered today.
-- **No file = the built-in default (`on`)**. Any change you make in the menu is
-  **written back immediately**.
-- So: turn it off once and it stays off on the next launch. Delete `prac.cfg` to
-  restore the default.
-- A read-only game folder still plays fine — it just cannot remember the setting.
+| Key | Menu row | Value |
+|---|---|---|
+| `playerplus` | `Player +` | 0 / 1 |
+| `hint` | `Hint` | 0 / 1 |
+| `hintcol` | `Hint col` | colour (decimal `RRGGBB`; white = 16777215, red = 16711680) |
+| `ppsize` | `P+ size` | 1 .. 64 |
+| `ppcol` | `P+ col` | colour |
+| `fixx` | `Fix X` | 0 .. 256 |
+| `fixy` | `Fix Y` | 0 .. 256 |
+
+- **All three games remember these seven** (Le01 v0.1.9 / Le02 v0.7.13 /
+  Le03 v0.5.15 and up).
+- **No file = every built-in default**. Any change you make in the menu rewrites
+  **the whole file** immediately.
+- Delete `prac.cfg` to restore the factory defaults.
+- **It is meant to be hand-editable**: edit, save, and it applies on the next launch.
+  Lines and keys it does not recognise are ignored.
+- A read-only game folder still plays fine — it just cannot remember settings.
 
 ---
 
-## 9. Differences between the two games
+## 9. Differences between the three games
 
-| | Le03 | Le02 |
-|---|---|---|
-| hint folder | `<game folder>\hint\` | same |
-| Line format | identical | identical |
-| Menu order | `Pattern` before `Hit` | `Frame` before `Pattern` |
-| `Fix X` factory value | `64` | `65` |
-| Crosshair size | about 25 px | about 27 px |
-| Pattern table | Appendix B | Appendix A |
+All three share the **same** hint file format and the **same** F12 menu: a main table
+plus a 10-row hint settings panel, the `Hint col` / `P+ size` / `P+ col` rows, the
+optional 7th-9th `R,G,B` fields, the seven `prac.cfg` keys, and `Fix X/Y` at 1/8
+logical pixel per step with 128 as neutral.
+
+What genuinely differs is only this:
+
+| | Le01 | Le02 | Le03 |
+|---|---|---|---|
+| hint folder | `<game folder>\hint\` | same | same |
+| Main-menu rows | 6 | 6 | **7** (two characters: `Lock P1` + `Lock P2`) |
+| Stage numbers | 1 .. 7 (Extra = 7) | 1 .. 7 | **1 .. 8** (stage 8 is Alpha) |
+| Pattern table | see section 4; the mid-stage chapter table lives in the practice menu | Appendix A | Appendix B |
+| Pause-menu hotkeys | **yes** (`R` restart / `Q` title, section 6.5) | same | same |
+| Unique to it | Extra-boss bomb fix | replay settings / TAS tools | `prepareAlphaMusic` |
+
+> Older builds (Le02 before v0.7.12, Le03 before v0.5.15) had a single-layer 12-row
+> menu, hard-coded colours and a `prac.cfg` that held only `playerplus`. Upgrading
+> brings all of that along, and **no manual migration is needed** -- those keys simply
+> did not exist in the old file.
 
 ---
 

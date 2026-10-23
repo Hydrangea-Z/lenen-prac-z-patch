@@ -1,0 +1,15 @@
+# Keep everything LF in the repository.  The .cea sources in particular are
+# assembled byte-for-byte into the patched exe, so their line endings must not
+# be rewritten by git.
+* text=auto eol=lf
+
+*.py    text eol=lf
+*.md    text eol=lf
+*.html  text eol=lf
+*.cea   text eol=lf
+*.json  text eol=lf
+*.txt   text eol=lf
+
+*.exe   binary
+*.dll   binary
+*.png   binary

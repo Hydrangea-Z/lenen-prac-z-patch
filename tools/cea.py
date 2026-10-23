@@ -197,9 +197,10 @@ class Block:
 
 
 class Compiler:
-    def __init__(self, text, image_base):
+    def __init__(self, text, image_base, base_dir=None):
         self.text = text
         self.image_base = image_base
+        self.base_dir = base_dir or os.getcwd()
         self.defines = {}      # name -> expr string
         self.declared = set()  # label(NAME)
         self.labels = {}       # name -> VA
@@ -310,6 +311,21 @@ class Compiler:
     # ---------------- assembly ---------------- #
     def _encode_line(self, s, va, phase1):
         """Return the bytes for one source line placed at `va`."""
+        # incbin("relative/path"): raw file bytes, resolved against the .cea's
+        # directory first and the process CWD second.  Missing files are fatal:
+        # silently padding would ship an exe that extracts a truncated DLL.
+        m = re.match(r'^incbin\(\s*"([^"]+)"\s*\)$', s, re.I)
+        if m:
+            rel = m.group(1)
+            for base in (self.base_dir, os.getcwd()):
+                p = os.path.join(base, rel)
+                if os.path.isfile(p):
+                    return open(p, "rb").read()
+            raise FileNotFoundError("incbin: cannot find %r (base %r)" % (rel, self.base_dir))
+        # res N: N zero bytes (path buffers, scratch space).
+        m = re.match(r"^res\s+([0-9A-Fa-f]+)$", s, re.I)
+        if m:
+            return b"\x00" * int(m.group(1), 16)
         m = re.match(r"^(db|dw|dd)\s+(.+)$", s, re.I)
         if m:
             width = {"db": 1, "dw": 2, "dd": 4}[m.group(1).lower()]
@@ -479,7 +495,8 @@ def build(cea_path, orig_path, out_path, report=False, json_path=None,
           cave_size_opt=None):
     pe = PE(orig_path)
     ib = pe.image_base
-    comp = Compiler(open(cea_path, encoding="utf-8").read(), ib)
+    comp = Compiler(open(cea_path, encoding="utf-8").read(), ib,
+                    os.path.dirname(os.path.abspath(cea_path)))
 
     # --- .leprac section (create it if the input does not have one) ---
     cave_expr = comp.defines.get("cave")
